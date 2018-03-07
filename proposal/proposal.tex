@@ -28,9 +28,52 @@ This proposal seeks to explore any-time motion planning for autonomous vehicles 
 \subsection*{Proposed Work}
 This section and the following section are tentatively described. I expect that I need to more thoroughly read the work referenced above to obtain a more clear idea of the direction for this proposal.
 
+In order to explore timely, collision-free path planning with motion uncertainty, I would implement Karaman's anytime RRT* algorithm in the CT-Space for the car-like robot with second order dynamics that is described in Patil's paper. I would determine an initial ``goal time'' via a method similar to the one described in the Tsai, Huang paper. Each time the anytime RRT* algorithm obtains a path, I would use the method in Patil's paper to compute the probability of collision for the generated path. Following that, I would use the shortcut smoothing algorithm from HW3 to optimize the path provided by the CT-Space RRT. Finally, I would effectively have both the expected time to the goal configuration and the probability of collision for the generated path from a single anytime RRT* iteration.
+
+Given the expected time and collision probability, I think it would be interesting to propagate the car via its motion model along the planned path with some Gaussian uncertainty, and somehow feed these values as ``weights'' in a way when re-running the anytime RRT* algorithm. I would need to think further about how this could be done, but ideally it would be in a way that causes anytime RRT* to continue finding more time-efficient and lower collision-probable paths on subsequent iterations.
+
+Most likely, low probability of collision should have a higher weight than timeliness of execution when both are considered as metrics for a path's cost. In other words, I would expect that it is more important to find the safest path than the most timely path. Both factors may be opposing objectives.
+
 \subsection*{Proposed Experiments and Expected Outcomes}
+I would evaluate my method by comparing it to the outcome of running anytime RRT* in the CT-Space under the same Gaussian motion model uncertainty assumption--but without feeding in the expected time to goal and probability of collision as weights to the next anytime RRT* iteration. I think it would be useful to evaluate how much more quickly my variant of anytime RRT* converges to a low-time, low collision probability path than the standard anytime RRT*. I would expect that since I would be somehow feeding in these metrics as weights to each new execution of anytime RRT*, my anytime RRT* would be able to converge faster to the most optimal, low-time, low collision probability path than the standard anytime RRT* in CT-space.
+
+This evaluation seems to require a formal proof that incorporating these two metrics as weights into the next anytime RRT* iteration causes convergence. Karaman asserted that his general anytime RRT* ``almost surely converges to a solution,'' and I would need to somehow hope/assume that my modification of it still converges to a solution.
 
 \subsection*{Weekly Schedule}
+\begin{itemize}
+\item \textbf{Week of March 12}
+  \begin{itemize}
+  \item Get feedback from Professor Berenson re this proposal
+  \item Look over papers referenced in this proposal at Level 2/Level 3 reading level. Get especially familiar with anytime RRT* and CT-Space planning
+  \item Figure out how to modify anytime RRT* with time and collision probability as weights on subsequent iterations (Start a backup plan if this is difficult)
+  \item Look over other papers as needed
+  \end{itemize}
+  
+\item \textbf{Week of March 19}
+  \begin{itemize}
+  \item Implement anytime RRT* in CT-Space as described by Karaman and Tsai for car-like robot with second order dynamics
+  \end{itemize}
+\item \textbf{Week of March 26}
+  \begin{itemize}
+  \item Finish implementing anytime RRT* in CT-Space
+    \item Implement probability of collision calculation described in Patil
+    \item Implement modified anytime RRT* algorithm using time and collision probability as weights
+  \end{itemize}
+\item \textbf{Week of April 2}
+
+  \begin{itemize}
+  \item Finish implementing modified anytime RRT* algorithm using time and collision probability as weights
+    \item Compare performance my algorithm to regular anytime RRT*
+    \item Make Presentation
+  \end{itemize}
+\item \textbf{Week of April 9}
+
+  \begin{itemize}
+    \item Finish Presentation
+    \item Write up Report
+    \item Present to Class
+  \end{itemize}
+\end{itemize}
 
 \subsection*{Referenced Work}
             $[1]$Karaman, Sertac et al. Anytime Motion Planning using the RRT*. 2011 IEEE International Conference on Robotics and Automation (ICRA) May 9-13, 2011, Shanghai International Conference Center, Shanghai, China\\
