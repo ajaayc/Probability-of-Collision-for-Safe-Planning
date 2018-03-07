@@ -1,0 +1,30 @@
+\documentclass[12pt]{article}
+\usepackage[margin=.5in,paperwidth=8.5in,paperheight=11in]{geometry}
+%\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+
+\def\xavg{\frac{x_1+x_2}{2}}
+\def\yavg{\frac{y_1+y_2}{2}}
+
+\begin{document}
+
+\begin{center}
+\section*{EECS598 Final Project Proposal}
+Ajaay Chandrasekaran\\
+Winter 2018
+\end{center}
+
+\subsection*{Abstract}
+Generation of real-time motion plans remains as an active research problem in the context of autonomous vehicles. Motion planners should prioritize generation of plans that require the least amount of time for actual execution, while satisfying differential constraints from the vehicle's dynamics. Furthermore, motion plan generation must account for natural uncertainty in a vehicle's motion in response to provided control inputs. This proposal seeks to explore robust motion planning that considers timeliness of execution for generated paths as well as probability of collision under motion uncertainty. We would explore the use of anytime motion planning algorithms in the CT-space, which continuously search for paths requiring the least amount of time to execute. Furthermore, we would attempt to plan real-time paths that yield low probabilities of collision under motion uncertainty. This planning approach would be explored via simulation of a car-like robot with second order dynamics and Gaussian motion uncertainty. We would evaluate the approach by comparing expected timeliness and probability of collision for our generated paths to those associated with standard C-Space search methods; we expect that our approach would be superior to other approaches when considering these values as metrics.
+
+\subsection*{Introduction and Background}
+In other words, generated plans must safely allow a vehicle to reach a goal configuration in spite of uncertainty in the vehicle's physical motion model.
+
+\subsection*{Proposed Work}
+
+\subsection*{Proposed Experiments and Expected Outcomes}
+
+\subsection*{Weekly Schedule}
+
+\end{document}
