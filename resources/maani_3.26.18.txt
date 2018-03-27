@@ -1,0 +1,11 @@
+Try on other data sets
+Matrix computation book for Givens Rotation
+Compare to cholupdate and qrUpdate
+
+Transformation from sphere to ellipse. See lecture notes 568.
+Affine transformation will scale shape to ellipse. Scaling to to new space makes problem easier.
+
+Chi-squared test. plan for worst case distance. If you can pass chi square test with some safety region e.g. 90%. Chi-squared test tells how far to search for obstacles. For a conservative estimate, find all obstacles in that region. If any, see if they pass that conservative test. 80% may be ok. chi square generalizes beyond multiple dimensions. If all points in ellipse pass chi squared test.
+
+If nothing around estimator of robot. Then ok. Want to go for the worst case.
+
