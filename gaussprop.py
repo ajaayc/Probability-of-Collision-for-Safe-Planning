@@ -38,6 +38,33 @@ class Gauss_Prop():
         distance = LA.norm(diff,axis=0)
         return distance
 
+    #Samples a 1 variable Gaussian with mean and sigma
+    def sample(self,mean,sigma):
+        num = sigma * np.random.randn(1,1) + mean
+        return num
+        
+    
+    #Generates pose following a noisy control input
+    def sampleOdometry(self,state,motioncmd):
+        drot1 = motioncmd[0]
+        dtrans = motioncmd[1]
+        drot2 = motioncmd[2]
+
+        alphas1 = self.alphas[0]
+        alphas2 = self.alphas[1]
+        alphas3 = self.alphas[2]
+        alphas4 = self.alphas[3]
+
+        noisymotion = np.zeros(np.shape(motioncmd))
+        
+        noisymotion[0] = self.sample(drot1,alphas1*np.square(drot1)+alphas2*np.square(dtrans));
+        noisymotion[1] = self.sample(dtrans,alphas3*np.square(dtrans)+alphas4*(np.square(drot1)+np.square(drot2)));
+        noisymotion[2] = self.sample(drot2,alphas1*np.square(drot2)+alphas2*np.square(dtrans));
+
+        newstate = self.prediction(state, noisymotion);
+
+        return newstate
+    
     #Returns list of measurements to all landmarks from sensor from the state, corrupted by random Gaussian noise
     def sensorReading(self,state):
         #For each landmark, find distance to it from x
