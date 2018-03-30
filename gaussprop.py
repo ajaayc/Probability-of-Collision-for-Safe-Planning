@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #Implements the algorithm to find the probability of collision from the paper "Estimating Probability of Collision for Safe Planning under Gaussian Motion and Sensing Uncertainty"
 import numpy as np
+from numpy import linalg as LA
 
 def roundAngle(t):
     return t % (2 * np.pi)
@@ -17,10 +18,67 @@ class Gauss_Prop():
         # variance of noise proportional to alphas
         self.alphas = np.square(np.array([0.05,0.001,0.05,0.01]))
 
-        # Standard deviation of Gaussian sensor noise (independent of distance)
-        self.beta = deg2rad(20);
-        self.Q = self.beta
+        # Variance of Gaussian sensor noise (distance to landmark)
+        self.Q = np.square(0.5)
 
+        #list of landmarks, i.e. their x,y locations
+        self.landmarks = np.array([[1,1],
+                                   [2,2]]).transpose()
+        self.numlandmarks = np.shape(self.landmarks)[0]
+        self.landmarkids = range(self.numlandmarks)
+
+    #Applies sensor model based on given landmark id
+    def observation(self,state,landmarkid):
+        currlmk = self.landmarks[:][landmarkid]
+        print 'currlmk:', currlmk
+        
+        #Get distance
+        s = state[0:2]
+        diff = s - currlmk
+        distance = LA.norm(diff,axis=0)
+        return distance
+
+    #Returns list of measurements to all landmarks from sensor from the state, corrupted by random Gaussian noise
+    def sensorReading(self,state):
+        #For each landmark, find distance to it from x
+        loc = state[0:2]
+        loc = np.reshape(loc,[2,1])
+        print "loc:", loc
+
+        print 'landmarks:', self.landmarks
+        diff = self.landmarks - loc
+        print "diff:", diff
+        model = LA.norm(diff,axis=0)
+
+        #Add 0-mean Gaussian noise to each
+        noises = np.sqrt(self.Q) * np.random.randn(1,self.numlandmarks) + 0
+
+        print "Model:", model
+        print "noises:", noises
+        measured = model + noises
+        return measured
+        
+    #Applies odometry motion model
+    def prediction(self,state,motioncmd):
+        drot1 = motioncmd[0]
+        dtrans = motioncmd[1]
+        drot2 = motioncmd[2]
+
+        x = state[0]
+        y = state[1]
+        theta = state[2]
+        
+        newstate = np.zeros(np.shape(state))
+
+        newstate[0] = x + dtrans * np.cos(theta + drot1)
+        newstate[1] = y + dtrans * np.sin(theta + drot1)
+        newstate[2] = theta + drot1 + drot2
+
+        newstate[2] = roundAngle(newstate[2])
+        
+        return newstate
+
+    #Jacobian of motion model with respect to control input
     def generateV_EKF(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
@@ -37,6 +95,7 @@ class Gauss_Prop():
 
         return V
 
+    #Odometry noise
     def generateM(self,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
@@ -54,3 +113,17 @@ class Gauss_Prop():
 
         #M = -M
         return M
+
+    #Jacobian of motion model with respect to state.
+    def generateG_EKF(self,prevMu,motioncmd):
+        drot1 = motioncmd[0]
+        dtrans = motioncmd[1]
+        drot2 = motioncmd[2]
+
+        prevTheta = prevMu[2];
+
+        G = np.identity(3);
+        G[0][2] = -dtrans * np.sin(prevTheta + drot1);
+        G[1][2] = dtrans * np.cos(prevTheta + drot1);
+
+        return G
