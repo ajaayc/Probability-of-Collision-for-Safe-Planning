@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #Implements the algorithm to find the probability of collision from the paper "Estimating Probability of Collision for Safe Planning under Gaussian Motion and Sensing Uncertainty"
 import numpy as np
+import linConstraint as lc
 from numpy import linalg as LA
 
 def roundAngle(t):
