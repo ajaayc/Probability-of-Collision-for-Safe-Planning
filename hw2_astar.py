@@ -5,6 +5,7 @@ import openravepy
 import numpy as np
 import sys
 import traceback
+import gaussprop as gp
 
 #### YOUR IMPORTS GO HERE ####
 import astar_planner as astar
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     #Penalize    
     angleWeight = 5
 
-    distanceDisc = 0.1
+    distanceDisc = 0.15
     angleDisc = np.pi/2
 
     room = env.GetBodies()[0]
@@ -165,8 +166,11 @@ if __name__ == "__main__":
         #### END OF YOUR CODE ###
     end = time.clock()
     print "Time: ", end - start
+ 
+    prop = gp.Gauss_Prop()
+    ulist = prop.getPathOdometry(path)
     
-        # Now that you have computed a path, convert it to an openrave trajectory 
+       # Now that you have computed a path, convert it to an openrave trajectory 
     traj = ConvertPathToTrajectory(robot, path)
     
     	# Execute the trajectory on the robot.

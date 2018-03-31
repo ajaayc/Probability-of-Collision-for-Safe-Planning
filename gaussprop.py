@@ -105,6 +105,28 @@ class Gauss_Prop():
         
         return newstate
 
+    #Given two poses, compute the odometry command between them
+    def inverseOdometry(self,p1,p2):
+        drot1 = np.arctan2(p2[1] - p1[1], p2[0] - p1[0]) - p1[2]
+        drot1 = roundAngle(drot1)
+
+        dtrans = np.sqrt(np.square(p2[0] - p1[0]) + np.square(p2[1] - p1[1]))
+
+        drot2 = p2[2] - p1[2] - drot1
+        drot2 = roundAngle(drot2)
+
+        return np.array([drot1,dtrans,drot2])
+
+    #Given a list of the states for the motion plan, determines the list of
+    #odometry commands needed to move from one state to the next
+    def getPathOdometry(self,path):
+        ulist = []
+        for t in range(len(path) - 1):
+            #Get odometry between x_t and x_t+1
+            u = self.inverseOdometry(path[t],path[t+1])
+            ulist.append(u)
+        return ulist
+
     #Jacobian of motion model with respect to control input
     def generateV_EKF(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
