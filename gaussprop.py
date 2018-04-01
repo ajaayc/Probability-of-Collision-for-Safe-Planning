@@ -12,6 +12,7 @@ def deg2rad(t):
 class Gauss_Prop():
     def __init__(self):
         self.initParams()
+        self.initConstraints()
 
     def initParams(self):
         self.alphas = []
@@ -28,6 +29,28 @@ class Gauss_Prop():
         self.numlandmarks = np.shape(self.landmarks)[0]
         self.landmarkids = range(self.numlandmarks)
 
+        #initialized 
+        self.constraints = []
+
+        #Initial robot position and covariance
+
+    #Initializes linear space constraints
+    def initConstraints(self):
+        
+        pass
+
+    #Returns True if there's a collision
+    def linearCollisionCheck(self,state):
+        #Loop through all constraints
+        for c in self.constraints:
+            result = c.checkConstraint(state)
+            #If failed to pass constraint, return true for a collision occurring
+            if result == False:
+                return True
+
+        #No collision occurred
+        return False
+        
     #Applies sensor model based on given landmark id
     def observation(self,state,landmarkid):
         currlmk = self.landmarks[:][landmarkid]
