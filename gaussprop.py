@@ -10,9 +10,33 @@ def deg2rad(t):
     return t * (np.pi/ 180.0)
 
 class Gauss_Prop():
-    def __init__(self):
+    def __init__(self,env,robot,room):
+        self.env = env
+        self.robot = robot
+        self.room = room
+
+        #Drawing handles
+        self.handles = []
+
         self.initParams()
         self.initConstraints()
+        self.drawBeacons()
+
+    def drawBeacons(self):
+        #Green beacons
+        pcolors = np.array(((56/255.0,249/255.0,26/255.0,1)))
+
+        #Loop through all landmarks
+        for l in self.landmarkids:
+            currbeacon = self.landmarks[:,l]
+            
+            with self.env:
+                self.handles.append(self.env.plot3(points=np.array((currbeacon[0],currbeacon[1],1)),
+                    pointsize=0.2,
+                    colors=pcolors,
+                    drawstyle = 2
+                                                   
+                ))
 
     def initParams(self):
         self.alphas = []
@@ -24,9 +48,9 @@ class Gauss_Prop():
         self.Q = np.square(0.5)
 
         #list of landmarks, i.e. their x,y locations
-        self.landmarks = np.array([[1,1],
-                                   [2,2]]).transpose()
-        self.numlandmarks = np.shape(self.landmarks)[0]
+        self.landmarks = np.array([[3,-3],
+                                   [0, 0]])
+        self.numlandmarks = np.shape(self.landmarks)[1]
         self.landmarkids = range(self.numlandmarks)
 
         #initialized 

@@ -98,6 +98,8 @@ if __name__ == "__main__":
 
     room = env.GetBodies()[0]
 
+    prop = gp.Gauss_Prop(env,robot,room)
+
     planner = astar.A_Star_Planner_8_euclidean(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)    
 
     #---------8 Manhatten Successful-----------
@@ -167,7 +169,6 @@ if __name__ == "__main__":
     end = time.clock()
     print "Time: ", end - start
  
-    prop = gp.Gauss_Prop()
     ulist = prop.getPathOdometry(path)
     
        # Now that you have computed a path, convert it to an openrave trajectory 
