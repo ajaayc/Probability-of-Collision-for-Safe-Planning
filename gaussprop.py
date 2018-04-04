@@ -9,6 +9,12 @@ def roundAngle(t):
 def deg2rad(t):
     return t * (np.pi/ 180.0)
 
+#Samples a 1 variable Gaussian with mean and sigma
+def sample(mean,sigma):
+    num = sigma * np.random.randn(1,1) + mean
+    return num
+
+
 class Gauss_Prop():
     def __init__(self,env,robot,room):
         self.env = env
@@ -20,23 +26,7 @@ class Gauss_Prop():
 
         self.initParams()
         self.initConstraints()
-        self.drawBeacons()
-
-    def drawBeacons(self):
-        #Green beacons
-        pcolors = np.array(((56/255.0,249/255.0,26/255.0,1)))
-
-        #Loop through all landmarks
-        for l in self.landmarkids:
-            currbeacon = self.landmarks[:,l]
-            
-            with self.env:
-                self.handles.append(self.env.plot3(points=np.array((currbeacon[0],currbeacon[1],1)),
-                    pointsize=0.2,
-                    colors=pcolors,
-                    drawstyle = 2
-                                                   
-                ))
+        #self.drawBeacons()
 
     def initParams(self):
         self.alphas = []
@@ -84,13 +74,7 @@ class Gauss_Prop():
         s = state[0:2]
         diff = s - currlmk
         distance = LA.norm(diff,axis=0)
-        return distance
-
-    #Samples a 1 variable Gaussian with mean and sigma
-    def sample(self,mean,sigma):
-        num = sigma * np.random.randn(1,1) + mean
-        return num
-        
+        return distance        
     
     #Generates pose following a noisy control input
     def sampleOdometry(self,state,motioncmd):
@@ -105,9 +89,9 @@ class Gauss_Prop():
 
         noisymotion = np.zeros(np.shape(motioncmd))
         
-        noisymotion[0] = self.sample(drot1,alphas1*np.square(drot1)+alphas2*np.square(dtrans));
-        noisymotion[1] = self.sample(dtrans,alphas3*np.square(dtrans)+alphas4*(np.square(drot1)+np.square(drot2)));
-        noisymotion[2] = self.sample(drot2,alphas1*np.square(drot2)+alphas2*np.square(dtrans));
+        noisymotion[0] = sample(drot1,alphas1*np.square(drot1)+alphas2*np.square(dtrans));
+        noisymotion[1] = sample(dtrans,alphas3*np.square(dtrans)+alphas4*(np.square(drot1)+np.square(drot2)));
+        noisymotion[2] = sample(drot2,alphas1*np.square(drot2)+alphas2*np.square(dtrans));
 
         newstate = self.prediction(state, noisymotion);
 
@@ -193,7 +177,7 @@ class Gauss_Prop():
         return V
 
     #Odometry noise
-    def generateM(self,motioncmd):
+    def generateM_EKF(self,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
         drot2 = motioncmd[2]
@@ -224,3 +208,50 @@ class Gauss_Prop():
         G[1][2] = dtrans * np.cos(prevTheta + drot1);
 
         return G
+
+    #Draws green beacons in OpenRave
+    def drawBeacons(self):
+        #Green beacons
+        pcolors = np.array(((56/255.0,249/255.0,26/255.0,1)))
+
+        #Loop through all landmarks
+        for l in self.landmarkids:
+            currbeacon = self.landmarks[:,l]
+
+            with self.env:
+                self.handles.append(self.env.plot3(points=np.array((currbeacon[0],currbeacon[1],1)),
+                    pointsize=0.2,
+                    colors=pcolors,
+                    drawstyle = 2
+
+                ))
+
+    #------------------------------------------------------------
+    #Stuff below this is for the actual paper
+    #------------------------------------------------------------
+    def estimateCollision():
+
+        pass
+
+
+    #Compute the 3x3 control gain matrix L_t+1
+    def generateL(self,nominalcurrstate,estimatedcurrstate,nominalgoalstate,nominalcontrol):
+        #Get (estimate) of the state deviation
+        xhatt = estimatedcurrstate - nominalcurrstate
+
+        #Get odometry needed to move from estimated currstate to nominalgoalstate
+        urequired = self.inverseOdometry(estimatedcurrstate,nominalgoalstate)
+
+        #Get difference between u and u*
+        ubar = urequired - nominalcontrol
+
+        #Find the 3x3 linear transformation L needed to move from xhatt to ubar
+        L = np.identity(3)
+
+        #TODO: Think about this divide by 0. This would occur if xhatt
+        #has 0's. i.e. deviation between curr state and nominal state is 0
+        L[0][0] = ubar[0] / (float(xhatt[0]) if xhatt[0] != 0 else 0.1)
+        L[1][1] = ubar[1] / (float(xhatt[1]) if xhatt[1] != 0 else 0.1)
+        L[2][2] = ubar[2] / (float(xhatt[2]) if xhatt[2] != 0 else 0.1)
+
+        return L

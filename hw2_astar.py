@@ -99,6 +99,7 @@ if __name__ == "__main__":
     room = env.GetBodies()[0]
 
     prop = gp.Gauss_Prop(env,robot,room)
+    prop.drawBeacons()
 
     planner = astar.A_Star_Planner_8_euclidean(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)    
 
@@ -111,7 +112,6 @@ if __name__ == "__main__":
 #    distanceDisc = 0.1
 #    angleDisc = np.pi/2
 #
-#    room = env.GetBodies()[0]
 #
 #    planner = astar.A_Star_Planner_8_manhatten(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)    
 
@@ -124,7 +124,6 @@ if __name__ == "__main__":
 #    distanceDisc = 0.08
 #    angleDisc = np.pi/2
 #
-#    room = env.GetBodies()[0]
 #
 #    planner = astar.A_Star_Planner_4_manhatten(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)
     
@@ -137,7 +136,6 @@ if __name__ == "__main__":
 #    distanceDisc = 0.08
 #    angleDisc = np.pi/2
 #
-#    room = env.GetBodies()[0]
 #
 #    planner = astar.A_Star_Planner_4_euclidean(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)
 
@@ -154,18 +152,12 @@ if __name__ == "__main__":
     planner.backtrackPath()
     path = planner.getPath()
     
-#    x = 0
-#    y = 0
-#    handles.append(env.plot3(points=array((x,y,1)),
-#                             pointsize=25.0,
-#                             colors=array(((0,0,1,0.2)))))
-
     #### Draw the X and Y components of the configurations explored by your algorithm
 
     #path = [] #put your final path in this variable
-     #Path is a list of configurations. path = [q0,q1,q2,...], where qi=[x,y,theta]     
-      
-        #### END OF YOUR CODE ###
+    #Path is a list of configurations. path = [q0,q1,q2,...], where qi=[x,y,theta]
+
+    #### END OF YOUR CODE ###
     end = time.clock()
     print "Time: ", end - start
  
