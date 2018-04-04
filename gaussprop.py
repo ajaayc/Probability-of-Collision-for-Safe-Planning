@@ -160,7 +160,8 @@ class Gauss_Prop():
         return ulist
 
     #Jacobian of motion model with respect to control input
-    def generateV_EKF(self,prevMu,motioncmd):
+    #Same as V from Thrun book
+    def generateB(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
         drot2 = motioncmd[2]
@@ -176,6 +177,42 @@ class Gauss_Prop():
 
         return V
 
+    #Jacobian of 3x1 motion model with respect to 3x1 Gaussian noise variables
+    def generateV(self):
+        return np.identity(3)
+
+    #Jacobian of 2x1 sensor model with respect to 2x1 Gaussian noise variables
+    def generateW(self):
+        return np.identity(2)
+
+    #Jacobian of 2x1 sensor model with respect to state.
+    #Same notation as Thrun book
+    #TODO: Extend this for case of more than 2 landmarks
+    def generateH(self,state):
+        #Make two HRows
+        r1 = self.makeHRow(state,0)
+        r2 = self.makeHRow(state,1)
+
+        #Stack them
+        H = np.array([r1,r2])
+        return H
+
+    def makeHRow(self,state,landmarkid):
+        mx = self.landmarks[0,landmarkid]
+        my = self.landmarks[1,landmarkid]
+
+        x = state[0]
+        y = state[1]
+
+        diff = np.array([x,y]) - np.array([mx,my])
+        q = np.square(diff[0]) + np.square(diff[1])
+        
+        entry1 = -(mx - x)/np.sqrt(q)
+        entry2 = -(my - y)/np.sqrt(q)
+        entry3 = 0
+
+        return [entry1,entry2,entry3]
+    
     #Odometry noise
     def generateM_EKF(self,motioncmd):
         drot1 = motioncmd[0]
@@ -196,7 +233,8 @@ class Gauss_Prop():
         return M
 
     #Jacobian of motion model with respect to state.
-    def generateG_EKF(self,prevMu,motioncmd):
+    #Same as G in Thrun book
+    def generateA(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
         drot2 = motioncmd[2]
