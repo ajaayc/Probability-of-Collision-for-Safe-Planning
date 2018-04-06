@@ -20,3 +20,6 @@ Lmatrix = prop.generateL(nominalcurrstate,estimatedcurrstate,nominalgoalstate,no
 print Lmatrix
 
 print 'H matrix: ',prop.generateH([1,2,0])
+
+K = prop.getKalmanGain([0,1,0],[0.1,0.1,0.1],[0,0.1,0],np.identity(3),[0.1,0.1,0.1])
+print K
