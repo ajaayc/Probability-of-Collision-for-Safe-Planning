@@ -3,8 +3,8 @@ import numpy as np
 
 prop = gp.Gauss_Prop(1,2,3)
 prop.generateM_EKF([1,2,3])
-prop.generateB([1,2,3],[1,2,3])
-prop.generateA([1,2,3],[1,2,3])
+prop.generateV_EKF([1,2,3],[1,2,3])
+prop.generateG_EKF([1,2,3],[1,2,3])
 prop.prediction([1,2,3],[1,2,3])
 print prop.sensorReading(np.array([1,2,3]))
 print prop.observation(np.array([8,2,3]),0)
@@ -21,5 +21,5 @@ print Lmatrix
 
 print 'H matrix: ',prop.generateH([1,2,0])
 
-K = prop.getKalmanGain([0,1,0],[0.1,0.1,0.1],[0,0.1,0],np.identity(3),[0.1,0.1,0.1])
-print K
+#K = prop.getKalmanGain([0,1,0],[0.1,0.1,0.1],[0,0.1,0],np.identity(3),[0.1,0.1,0.1])
+#print K

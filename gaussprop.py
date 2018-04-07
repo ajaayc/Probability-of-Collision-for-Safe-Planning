@@ -37,7 +37,7 @@ class Gauss_Prop():
 
         # Variance of Gaussian sensor noise (distance to landmark)
         self.Q_noise = np.square(0.5)
-        self.Q = self.Q_noise * np.identity(2)
+        self.Q = self.Q_noise
 
         #list of landmarks, i.e. their x,y locations
         self.landmarks = np.array([[3,-3],
@@ -49,7 +49,9 @@ class Gauss_Prop():
         self.constraints = []
 
         #Initial robot position and covariance
-
+        self.initialStateMean = []
+        self.initialStateCovariance = []
+        
     #Initializes linear space constraints
     def initConstraints(self):
         
@@ -77,6 +79,11 @@ class Gauss_Prop():
         diff = s - currlmk
         distance = LA.norm(diff,axis=0)
         return distance        
+
+    def sampleObservation(self,state,landmarkid):
+        distance = observation(state,landmarkid)
+        #Add Gaussian noise to distance
+        return (distance + sample(0,np.sqrt(self.Q)))
     
     #Generates pose following a noisy control input
     def sampleOdometry(self,state,motioncmd):
@@ -163,7 +170,7 @@ class Gauss_Prop():
 
     #Jacobian of motion model with respect to control input
     #Same as V from Thrun book
-    def generateB(self,prevMu,motioncmd):
+    def generateV_EKF(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
         drot2 = motioncmd[2]
@@ -178,14 +185,6 @@ class Gauss_Prop():
         V[1][1] = np.sin(prevTheta + drot1);
 
         return V
-
-    #Jacobian of 3x1 motion model with respect to 3x1 Gaussian noise variables
-    def generateV(self):
-        return np.identity(3)
-
-    #Jacobian of 2x1 sensor model with respect to 2x1 Gaussian noise variables
-    def generateW(self):
-        return np.identity(2)
 
     #Jacobian of 2x1 sensor model with respect to state.
     #Same notation as Thrun book
@@ -236,7 +235,7 @@ class Gauss_Prop():
 
     #Jacobian of motion model with respect to state.
     #Same as G in Thrun book
-    def generateA(self,prevMu,motioncmd):
+    def generateG_EKF(self,prevMu,motioncmd):
         drot1 = motioncmd[0]
         dtrans = motioncmd[1]
         drot2 = motioncmd[2]
@@ -248,29 +247,6 @@ class Gauss_Prop():
         G[1][2] = dtrans * np.cos(prevTheta + drot1);
 
         return G
-
-    def getKalmanGain(self,nominalx,nominalu,deviationPrevMu,deviationPrevSigma,deviationcontrol):
-        #Apply linearized motion model to predict next state deviation
-        A = self.generateA(nominalx,nominalu)
-        B = self.generateB(nominalx,nominalu)
-        V = self.generateV()
-
-        #Now apply the matrices
-        mubardeviation = A * deviationPrevMu + B * deviationcontrol
-
-        #Transform sigma
-        sigmabardeviation = A * deviationPrevSigma * A.transpose()
-
-        #Add R, Thrun Book
-        M = self.generateM_EKF(nominalu)
-        #TODO: Is this the correct M?
-        sigmabardeviation = sigmabardeviation + B * M * B.transpose()
-
-        H = self.generateH(nominalx)
-        Q = self.Q
-        
-        K = sigmabardeviation * H.transpose() * LA.inv(H * sigmabardeviation * H.transpose() + Q)
-        return K
         
     #Draws green beacons in OpenRave
     def drawBeacons(self):
@@ -288,14 +264,6 @@ class Gauss_Prop():
                     drawstyle = 2
 
                 ))
-
-    #------------------------------------------------------------
-    #Stuff below this is for the actual paper
-    #------------------------------------------------------------
-    def estimateCollision():
-
-        pass
-
 
     #Compute the 3x3 control gain matrix L_t+1
     def generateL(self,nominalcurrstate,estimatedcurrstate,nominalgoalstate,nominalcontrol):
@@ -318,3 +286,141 @@ class Gauss_Prop():
         L[2][2] = ubar[2] / (float(xhatt[2]) if xhatt[2] != 0 else 0.1)
 
         return L
+
+
+    #------------------------------------------------------------
+    #Stuff below this is for the actual paper
+    #------------------------------------------------------------
+    #trajectory is list of states for the motion plan
+    #controlinputs is list of odometry commands to transition between states
+    #len(controls) = len(trajectory) - 1
+    def EKF_GaussProp(self,trajectory,controlinputs):
+        self.initialStateMean = trajectory[0]
+        self.initialStateCovariance = .001 * np.identity(3)
+
+        #Initialize mean and covariance
+        mu = self.initialStateMean;
+        cov = self.initialStateCovariance;
+
+        #Store the real state (we don't know this in practice)
+        realstate = trajectory[0]
+        
+        #simulate trajectory
+        for i,control in enumerate(controlinputs):
+            #Get motion command
+            motionCommand = controlinputs[i]
+
+            M = generateM_EKF(motionCommand,self.alphas);
+            Q = self.Q
+
+            #Get control gain to move to next state
+            nominalstate = trajectory[i]
+            estimatedstate = mu
+            nominalgoal = trajectory[i+1]
+            nominalcontrol = controlinputs[i]
+
+            gain = self.generateL(nominalstate,estimatedstate,nominalgoal,nominalcontrol)
+            #Multiply gain by deviation in state to get deviation to add to u*
+            statedeviation = estimatedstate - nominalstate
+
+            controldeviation = gain * statedeviation
+
+            #Add control deviation to nominal control
+            appliedcontrol = nominalcontrol + controldeviation
+
+
+            #------------------------------------------------------------
+            #EKF Predict. Predict where we'll go based on applied control
+            predMu,predSigma = self.EKFpredict(mu,cov,appliedcontrol,M,Q)
+            #------------------------------------------------------------
+
+            #Now move (with noise)
+            #Add noise to odometry to go to another state
+            nextstate = self.sampleOdometry(realstate,appliedcontrol)
+            realstate = nextstate
+
+            realobservations = np.zeros([1,self.numlandmarks])
+            
+            #Get sensor measurements from the real state. Loop
+            #through all landmarks
+            for currlid in range(self.numlandmarks):
+                z = self.sampleObservation(realstate,currlid)
+                realobservations[0,currlid] = z
+            
+            #------------------------------------------------------------
+            #EKF Update of estimated state and covariance based on the measurements
+            newmu,newsigma = self.EKFupdate(predMu,predSigma,realobservations,Q)
+            mu = newmu
+            cov = newsigma
+            
+            #
+            #------------------------------------------------------------
+            
+
+            
+    def EKFpredict(self,mu,Sigma,u,M,Q):
+        #Get G matrix and V matrix
+        G = generateG_EKF(mu,u)
+        V = generateV_EKF(mu,u)
+
+        #noise in odometry
+        R = V * M * V.transpose()
+
+        predMu = self.prediction(mu,u)
+        predSigma = G * Sigma * G.transpose() + V * M * V.transpose()
+
+        return predMu,predSigma
+
+    def EKFupdate(self,predMu,predSigma,measurements,Q):
+        #Loop through all measurements
+        for lid,measurement in enumerate(measurements):
+            #lid is landmark id. measurement is the distance
+            #to the landmark recorded by sensor
+            landmark_x = self.landmarks[0,lid]
+            landmark_y = self.landmarks[1,lid]
+
+            # Lines 10-13 of EKF Algorithm
+            H = self.makeHRow(predMu,lid)
+
+            #Innovation / residual covariance
+
+            S = H * predSigma * H.transpose() + Q;
+
+            # Kalman gain
+            K = predSigma * H.transpose() * LA.inv(S)
+
+            #z and zhat
+            z = measurement
+            zhat = observation(predMu,lid)
+            
+            # Correction
+            temp = z - zhat;
+            temp = roundAngle(temp);
+            predMu = predMu + K * (temp);
+            predSigma = (np.identity(3) - K * H) * predSigma;
+
+        return predMu,predSigma
+
+            
+    # def getKalmanGain(self,nominalx,nominalu,deviationPrevMu,deviationPrevSigma,deviationcontrol):
+    #     #Apply linearized motion model to predict next state deviation
+    #     A = self.generateA(nominalx,nominalu)
+    #     B = self.generateB(nominalx,nominalu)
+    #     V = self.generateV()
+
+    #     #Now apply the matrices
+    #     mubardeviation = A * deviationPrevMu + B * deviationcontrol
+
+    #     #Transform sigma
+    #     sigmabardeviation = A * deviationPrevSigma * A.transpose()
+
+    #     #Add R, Thrun Book
+    #     M = self.generateM_EKF(nominalu)
+    #     #TODO: Is this the correct M?
+    #     sigmabardeviation = sigmabardeviation + B * M * B.transpose()
+
+    #     H = self.generateH(nominalx)
+    #     Q = self.Q
+        
+    #     K = sigmabardeviation * H.transpose() * LA.inv(H * sigmabardeviation * H.transpose() + Q)
+    #     return K
