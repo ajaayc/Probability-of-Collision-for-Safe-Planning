@@ -94,7 +94,7 @@ if __name__ == "__main__":
     #Penalize    
     angleWeight = 5
 
-    distanceDisc = 0.15
+    distanceDisc = 0.1
     angleDisc = np.pi/2
 
     room = env.GetBodies()[0]

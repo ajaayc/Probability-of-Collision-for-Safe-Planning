@@ -33,15 +33,15 @@ class Gauss_Prop():
         self.alphas = []
         # Motion noise (in odometry space, see Table 5.5, p.134 in book).
         # variance of noise proportional to alphas
-        self.alphas = np.square(np.array([0.05,0.001,0.05,0.01]))
+        self.alphas = np.square(np.array([0.0001,0.0001,0.0001,0.0001]))
 
         # Variance of Gaussian sensor noise (distance to landmark)
-        self.Q_noise = np.square(0.5)
+        self.Q_noise = np.square(0.005)
         self.Q = self.Q_noise
 
         #list of landmarks, i.e. their x,y locations
-        self.landmarks = np.array([[3,-3],
-                                   [0, 0]])
+        self.landmarks = np.array([[3,-3,0,0,0,  0,-1,1,0],
+                                   [0, 0,3,-3,1,-1, 0,0,0]])
         self.numlandmarks = np.shape(self.landmarks)[1]
         self.landmarkids = range(self.numlandmarks)
 
@@ -275,6 +275,7 @@ class Gauss_Prop():
 
         #Get difference between u and u*
         ubar = np.array(urequired) - np.array(nominalcontrol)
+        print 'ubar: ', ubar
 
         #Find the 3x3 linear transformation L needed to move from xhatt to ubar
         L = np.identity(3)
@@ -360,7 +361,9 @@ class Gauss_Prop():
             mu = newmu
             cov = newsigma
 
-            print 'estimatestated: ', mu
+            print 'nominalstate: ', trajectory[i+1]
+            print 'estimatestate: ', mu
+
             #
             #------------------------------------------------------------
             
