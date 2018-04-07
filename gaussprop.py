@@ -40,8 +40,9 @@ class Gauss_Prop():
         self.Q = self.Q_noise
 
         #list of landmarks, i.e. their x,y locations
-        self.landmarks = np.array([[3,-3,0,0,0,  0,-1,1,0],
-                                   [0, 0,3,-3,1,-1, 0,0,0]])
+        self.landmarks = np.array([[3,-3,0, 0, 0,  0,-1,1, 0,-1,1,   -1,-2],
+                                   [0, 0,3,-3, 1, -1, 0,0,-1, 1,1,   -1,-2]])
+
         self.numlandmarks = np.shape(self.landmarks)[1]
         self.landmarkids = range(self.numlandmarks)
 
@@ -296,9 +297,6 @@ class Gauss_Prop():
     #controlinputs is list of odometry commands to transition between states
     #len(controls) = len(trajectory) - 1
     def EKF_GaussProp(self,trajectory,controlinputs):
-        import pdb
-        pdb.set_trace()
-
         self.initialStateMean = trajectory[0]
         self.initialStateCovariance = .001 * np.identity(3)
 
@@ -356,6 +354,10 @@ class Gauss_Prop():
             
             #------------------------------------------------------------
             #EKF Update of estimated state and covariance based on the measurements
+
+            #import pdb
+            #pdb.set_trace()
+
             realobservations = list(realobservations[0])
             newmu,newsigma = self.EKFupdate(predMu,predSigma,realobservations,Q)
             mu = newmu
@@ -363,7 +365,8 @@ class Gauss_Prop():
 
             print 'nominalstate: ', trajectory[i+1]
             print 'estimatestate: ', mu
-
+            print 'estimatecov: ', cov
+            
             #
             #------------------------------------------------------------
             
@@ -407,7 +410,6 @@ class Gauss_Prop():
             
             # Correction
             temp = z - zhat;
-            temp = roundAngle(temp);
             predMu = np.asmatrix(predMu).transpose() + K * (temp);
             #Make predMu an array again
             predMu = predMu.transpose()
