@@ -71,8 +71,8 @@ class Gauss_Prop():
         
     #Applies sensor model based on given landmark id
     def observation(self,state,landmarkid):
-        currlmk = self.landmarks[:][landmarkid]
-        print 'currlmk:', currlmk
+        currlmk = self.landmarks[:,landmarkid]
+        #print 'currlmk:', currlmk
         
         #Get distance
         s = state[0:2]
@@ -81,7 +81,7 @@ class Gauss_Prop():
         return distance        
 
     def sampleObservation(self,state,landmarkid):
-        distance = observation(state,landmarkid)
+        distance = self.observation(state,landmarkid)
         #Add Gaussian noise to distance
         return (distance + sample(0,np.sqrt(self.Q)))
     
@@ -212,7 +212,7 @@ class Gauss_Prop():
         entry2 = -(my - y)/np.sqrt(q)
         entry3 = 0
 
-        return [entry1,entry2,entry3]
+        return np.array([entry1,entry2,entry3])
     
     #Odometry noise
     def generateM_EKF(self,motioncmd):
@@ -268,13 +268,13 @@ class Gauss_Prop():
     #Compute the 3x3 control gain matrix L_t+1
     def generateL(self,nominalcurrstate,estimatedcurrstate,nominalgoalstate,nominalcontrol):
         #Get (estimate) of the state deviation
-        xhatt = estimatedcurrstate - nominalcurrstate
+        xhatt = np.array(estimatedcurrstate) - np.array(nominalcurrstate)
 
         #Get odometry needed to move from estimated currstate to nominalgoalstate
         urequired = self.inverseOdometry(estimatedcurrstate,nominalgoalstate)
 
         #Get difference between u and u*
-        ubar = urequired - nominalcontrol
+        ubar = np.array(urequired) - np.array(nominalcontrol)
 
         #Find the 3x3 linear transformation L needed to move from xhatt to ubar
         L = np.identity(3)
@@ -295,6 +295,9 @@ class Gauss_Prop():
     #controlinputs is list of odometry commands to transition between states
     #len(controls) = len(trajectory) - 1
     def EKF_GaussProp(self,trajectory,controlinputs):
+        import pdb
+        pdb.set_trace()
+
         self.initialStateMean = trajectory[0]
         self.initialStateCovariance = .001 * np.identity(3)
 
@@ -310,7 +313,7 @@ class Gauss_Prop():
             #Get motion command
             motionCommand = controlinputs[i]
 
-            M = generateM_EKF(motionCommand,self.alphas);
+            M = self.generateM_EKF(motionCommand);
             Q = self.Q
 
             #Get control gain to move to next state
@@ -321,13 +324,15 @@ class Gauss_Prop():
 
             gain = self.generateL(nominalstate,estimatedstate,nominalgoal,nominalcontrol)
             #Multiply gain by deviation in state to get deviation to add to u*
-            statedeviation = estimatedstate - nominalstate
+            statedeviation = np.array(estimatedstate) - np.array(nominalstate)
+            statedeviation = np.asmatrix(statedeviation).transpose()
 
             controldeviation = gain * statedeviation
+            controldeviation = controldeviation.transpose()
 
             #Add control deviation to nominal control
-            appliedcontrol = nominalcontrol + controldeviation
-
+            appliedcontrol = np.array(nominalcontrol) + np.array(controldeviation)
+            appliedcontrol = appliedcontrol[0]
 
             #------------------------------------------------------------
             #EKF Predict. Predict where we'll go based on applied control
@@ -338,6 +343,7 @@ class Gauss_Prop():
             #Add noise to odometry to go to another state
             nextstate = self.sampleOdometry(realstate,appliedcontrol)
             realstate = nextstate
+            print 'realstate: ', realstate
 
             realobservations = np.zeros([1,self.numlandmarks])
             
@@ -345,14 +351,16 @@ class Gauss_Prop():
             #through all landmarks
             for currlid in range(self.numlandmarks):
                 z = self.sampleObservation(realstate,currlid)
-                realobservations[0,currlid] = z
+                realobservations[0,currlid] = z[0][0]
             
             #------------------------------------------------------------
             #EKF Update of estimated state and covariance based on the measurements
+            realobservations = list(realobservations[0])
             newmu,newsigma = self.EKFupdate(predMu,predSigma,realobservations,Q)
             mu = newmu
             cov = newsigma
-            
+
+            print 'estimatestated: ', mu
             #
             #------------------------------------------------------------
             
@@ -360,14 +368,14 @@ class Gauss_Prop():
             
     def EKFpredict(self,mu,Sigma,u,M,Q):
         #Get G matrix and V matrix
-        G = generateG_EKF(mu,u)
-        V = generateV_EKF(mu,u)
+        G = self.generateG_EKF(mu,u)
+        V = self.generateV_EKF(mu,u)
 
         #noise in odometry
         R = V * M * V.transpose()
 
         predMu = self.prediction(mu,u)
-        predSigma = G * Sigma * G.transpose() + V * M * V.transpose()
+        predSigma = G * Sigma * G.transpose() + R
 
         return predMu,predSigma
 
@@ -381,6 +389,7 @@ class Gauss_Prop():
 
             # Lines 10-13 of EKF Algorithm
             H = self.makeHRow(predMu,lid)
+            H = np.asmatrix(H)
 
             #Innovation / residual covariance
 
@@ -391,13 +400,17 @@ class Gauss_Prop():
 
             #z and zhat
             z = measurement
-            zhat = observation(predMu,lid)
+            zhat = self.observation(predMu,lid)
             
             # Correction
             temp = z - zhat;
             temp = roundAngle(temp);
-            predMu = predMu + K * (temp);
+            predMu = np.asmatrix(predMu).transpose() + K * (temp);
+            #Make predMu an array again
+            predMu = predMu.transpose()
+            predMu = np.array(predMu)[0]
             predSigma = (np.identity(3) - K * H) * predSigma;
+            
 
         return predMu,predSigma
 

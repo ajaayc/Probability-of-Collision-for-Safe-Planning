@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import traceback
 import gaussprop as gp
+import cPickle as pickle
 
 #### YOUR IMPORTS GO HERE ####
 import astar_planner as astar
@@ -162,8 +163,18 @@ if __name__ == "__main__":
     print "Time: ", end - start
  
     ulist = prop.getPathOdometry(path)
+
+    #Save path and odometry to file
+    file_temp = open('trajectory.dat', 'w')
+    pickle.dump(path, file_temp)
+    file_temp.close()
+
+    file_temp = open('odometry.dat', 'w')
+    pickle.dump(ulist, file_temp)
+    file_temp.close()
     
-       # Now that you have computed a path, convert it to an openrave trajectory 
+    
+    # Now that you have computed a path, convert it to an openrave trajectory 
     traj = ConvertPathToTrajectory(robot, path)
     
     	# Execute the trajectory on the robot.
