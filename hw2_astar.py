@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # 1) get the 1st robot that is inside the loaded scene
     # 2) assign it to the variable named 'robot'
     robot = env.GetRobots()[0]
-
+    
     # tuck in the PR2's arms for driving
     tuckarms(env,robot);
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         #import pdb
         #pdb.set_trace()
-        goalconfig = [-2.54,0.3,-np.pi/2]
+        goalconfig = [2.28,0.11,0]
     
     #Drawing handles    
     handles = []
