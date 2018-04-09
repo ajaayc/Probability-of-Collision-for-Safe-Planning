@@ -302,6 +302,8 @@ class Gauss_Prop():
         self.initialStateMean = trajectory[0]
         self.initialStateCovariance = .001 * np.identity(3)
 
+        realpath = []
+        
         #Initialize mean and covariance
         mu = self.initialStateMean;
         cov = self.initialStateCovariance;
@@ -309,6 +311,8 @@ class Gauss_Prop():
         #Store the real state (we don't know this in practice)
         realstate = trajectory[0]
         
+        realpath.append(realstate)
+
         #simulate trajectory
         for i,control in enumerate(controlinputs):
             #Get motion command
@@ -345,6 +349,7 @@ class Gauss_Prop():
             nextstate = self.sampleOdometry(realstate,appliedcontrol)
             realstate = nextstate
             print 'realstate: ', realstate
+            realpath.append(realstate)
 
             realobservations = np.zeros([1,self.numlandmarks])
             
@@ -371,7 +376,7 @@ class Gauss_Prop():
             
             #
             #------------------------------------------------------------
-            
+        return realpath
 
             
     def EKFpredict(self,mu,Sigma,u,M,Q):
