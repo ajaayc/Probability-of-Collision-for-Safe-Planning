@@ -17,6 +17,20 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+def getRotationMat(alph):
+    rot = np.array([[np.cos(alph),np.sin(alph),0,0],
+                    [-np.sin(alph),np.cos(alph),0,0],
+                    [0,0,1,0],
+                    [0,0,0,1]])
+    return rot
+
+def getTranslationMat(x,y,z):
+    trans = np.array([[1,0,0,x],
+                        [0,1,0,y],
+                        [0,0,1,z],
+                        [0,0,0,1]])
+    return trans
+
 def waitrobot(robot):
     """busy wait for robot completion"""
     while not robot.GetController().IsDone():
@@ -56,7 +70,8 @@ if __name__ == "__main__":
 
     env.Reset()
     # load a scene from ProjectRoom environment XML file
-    env.Load('data/pr2test2.env.xml')
+    #env.Load('data/pr2test2.env.xml')
+    env.Load('pr2custom.env.xml')
     time.sleep(0.1)
 
     # 1) get the 1st robot that is inside the loaded scene

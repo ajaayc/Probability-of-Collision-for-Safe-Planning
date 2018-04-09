@@ -33,15 +33,17 @@ class Gauss_Prop():
         self.alphas = []
         # Motion noise (in odometry space, see Table 5.5, p.134 in book).
         # variance of noise proportional to alphas
-        self.alphas = np.square(np.array([0.0001,0.0001,0.0001,0.0001]))
+        self.alphas = np.square(np.array([0.1, 0.001, 0.05, 0.01]))
 
         # Variance of Gaussian sensor noise (distance to landmark)
-        self.Q_noise = np.square(0.005)
+        self.Q_noise = np.square(0.5)
         self.Q = self.Q_noise
 
         #list of landmarks, i.e. their x,y locations
-        self.landmarks = np.array([[3,-3,0, 0, 0,  0,-1,1, 0,-1,1,   -1,-2],
-                                   [0, 0,3,-3, 1, -1, 0,0,-1, 1,1,   -1,-2]])
+        #self.landmarks = np.array([[3,-3,0, 0, 0,  0,-1,1, 0,-1,1,   -1, 1],
+        #                           [0, 0,3,-3, 1, -1, 0,0,-1, 1,1,   -1,-1]])
+        self.landmarks = np.array([[3,-3,0, 0],
+                                   [0, 0,3,-3]])
 
         self.numlandmarks = np.shape(self.landmarks)[1]
         self.landmarkids = range(self.numlandmarks)
