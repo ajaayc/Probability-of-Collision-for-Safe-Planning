@@ -43,7 +43,7 @@ class Gauss_Prop():
         #self.landmarks = np.array([[3,-3,0, 0, 0,  0,-1,1, 0,-1,1,   -1, 1],
         #                           [0, 0,3,-3, 1, -1, 0,0,-1, 1,1,   -1,-1]])
         self.landmarks = np.array([[3,-3,0, 0],
-                                   [0, 0,3,-3]])
+                                   [0, 0,1,-1]])
 
         self.numlandmarks = np.shape(self.landmarks)[1]
         self.landmarkids = range(self.numlandmarks)
