@@ -92,7 +92,7 @@ if __name__ == "__main__":
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         #import pdb
         #pdb.set_trace()
-        goalconfig = [2.6,1.4,-pi/2]
+        goalconfig = [-2.54,0.3,-np.pi/2]
     
     #Drawing handles    
     handles = []
