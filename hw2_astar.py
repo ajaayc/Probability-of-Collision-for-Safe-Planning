@@ -72,8 +72,13 @@ if __name__ == "__main__":
     # load a scene from ProjectRoom environment XML file
     #env.Load('data/pr2test2.env.xml')
     env.Load('pr2custom.env.xml')
+    #env.Load('data/ikeatable.kinbody.xml')
+    #env.Load('playbox.kinbody.xml')
     time.sleep(0.1)
 
+    import pdb
+    pdb.set_trace()
+    
     # 1) get the 1st robot that is inside the loaded scene
     # 2) assign it to the variable named 'robot'
     robot = env.GetRobots()[0]
@@ -87,7 +92,7 @@ if __name__ == "__main__":
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         #import pdb
         #pdb.set_trace()
-        goalconfig = [2.6,-1.3,-pi/2]
+        goalconfig = [2.6,1.4,-pi/2]
     
     #Drawing handles    
     handles = []
