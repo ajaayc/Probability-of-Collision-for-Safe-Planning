@@ -14,9 +14,73 @@ public:
                         "This is an example command");
         RegisterCommand("ArmaCommand",boost::bind(&MCModule::ArmaCommand,this,_1,_2),
                         "This is testing armadillo");
+        RegisterCommand("setAlphas",boost::bind(&MCModule::setAlphas,this,_1,_2),
+                        "This is to initialize alphas from python");
+        RegisterCommand("setQ",boost::bind(&MCModule::setQ,this,_1,_2),
+                        "This is to initialize variance of sensor noise");
+        RegisterCommand("setNumLandmarks",boost::bind(&MCModule::setNumLandmarks,this,_1,_2),
+                        "This is to initialize number of landmark locations");
+        RegisterCommand("setLandmarks",boost::bind(&MCModule::setLandmarks,this,_1,_2),
+                        "This is to initialize landmark locations");
+        RegisterCommand("setNumParticles",boost::bind(&MCModule::setNumParticles,this,_1,_2),
+                        "This is to initialize number of landmark locations");
+
     }
     virtual ~MCModule() {}
+
+    bool setNumParticles(std::ostream& sout, std::istream& sinput){
+        int num;
+        sinput >> num;
+        sim.setNumParticles(num);
+    }
     
+    bool setNumLandmarks(std::ostream& sout, std::istream& sinput){
+        int num;
+        sinput >> num;
+        sim.setNumLandmarks(num);
+    }
+
+    bool setLandmarks(std::ostream& sout, std::istream& sinput){
+        std::string locations;
+        int num = sim.getNumLandmarks();
+        arma::Mat<double> landmarks = zeros<arma::Mat<double> >(2,num);
+
+        for(int i = 0; i < num; ++i){
+            double val;
+            sinput >> val;
+            landmarks(0,i) = val;
+        }
+        
+        for(int i = 0; i < num; ++i){
+            double val;
+            sinput >> val;
+            landmarks(1,i) = val;
+        }
+        
+        sim.setLandmarks(landmarks);
+    }
+
+    bool setQ(std::ostream& sout, std::istream& sinput){
+        double Q;
+        sinput >> Q;
+        sim.setQ(Q);
+    }
+    
+    bool setAlphas(std::ostream& sout, std::istream& sinput)
+        {
+            std::vector<double> alphas;
+            std::string curr;
+            while(sinput >> curr){
+                //To double
+                std::string::size_type sz;     // alias of size_t
+                double alph = std::stod (curr,&sz);
+                alphas.push_back(alph);
+            }
+            sim.setAlphas(alphas);
+            
+            return true;
+        }
+
     bool ArmaCommand(std::ostream& sout, std::istream& sinput)
     {
         // Initialize the random generator
