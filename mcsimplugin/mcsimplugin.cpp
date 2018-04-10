@@ -1,13 +1,14 @@
 #include <openrave/plugin.h>
 #include <boost/bind.hpp>
-#include <unordered_set>
-#include <armadillo>
+#include "MCSimulator.h"
 using namespace OpenRAVE;
 
 
 class MCModule : public ModuleBase
 {
 public:
+    MCSimulator sim;
+    
     MCModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
         RegisterCommand("MyCommand",boost::bind(&MCModule::MyCommand,this,_1,_2),
                         "This is an example command");
@@ -22,6 +23,11 @@ public:
         arma::arma_rng::set_seed_random();
         std::cout << "inside armacommand" << std::endl;
             
+        arma::Mat<double> C = { {1, 3, 5},
+                                {2, 4, 6} };
+
+        std::cout << "C matrix: " << C << "\n";
+
         // Create a 4x4 random matrix and print it on the screen
         arma::Mat<double> A = arma::randu(4,4);
         std::cout << "A:\n" << A << "\n";
