@@ -57,9 +57,15 @@ class MCSimulator{
 
     //Particles
     int numParticles;
+    arma::Mat<double> mcparticles;
 
-    //Covariance of state
+    //Covariance and mean of state
     arma::Mat<double> covariance;
+    arma::Mat<double> mu;
+
+    //Initial mean and covariance
+    arma::Mat<double> initialcovariance;
+    arma::Mat<double> initialmu;
 
     //Trajectory and odometry
     arma::Mat<double> trajectory;
@@ -92,15 +98,16 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         robotptr = robots[0];
     }
 
-    void runSimulation(){
-        
-    }
-
-
     void setTrajectory(const arma::Mat<double>& trajectory){
         this->trajectory = trajectory;
         std::cout << "C++ Got Trajectory:" << std::endl;
         std::cout << this->trajectory << std::endl;
+
+        //Set initial mean. to first column
+        initialmu = trajectory.col(0);
+        //Initial mean
+        std::cout << "C++ got initial mean:" << std::endl;
+        std::cout << initialmu << std::endl;
     }
     
     void setOdometry(const arma::Mat<double>& odometry){
@@ -110,7 +117,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
 
     void setInitialCovariance(const arma::Mat<double>& cov){
-        this->covariance = cov;
+        this->initialcovariance = cov;
         std::cout << "C++ Got initial covariance:" << std::endl;
         std::cout << cov << std::endl;
     }
@@ -183,6 +190,25 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
         return collisionExists;
     }
+
+    void initParticles(){
+        //Initialize particles
+        //Use mean and covariance
+        mcparticles = mvnrnd(mu, covariance, numParticles);
+
+        std::cout << "C++ made initial particles: " << std::endl;
+        std::cout << mcparticles << std::endl;
+    }
+    
+    // Run the MC simulation to get the probability of collision
+    void runSimulation(){
+        mu = initialmu;
+        covariance = initialcovariance;
+        //Initialize particles
+        initParticles();
+    }
+
+
 };
 
 

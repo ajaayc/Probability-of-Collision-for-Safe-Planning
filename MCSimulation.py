@@ -74,7 +74,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 1000
+    numParticles = 10
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
