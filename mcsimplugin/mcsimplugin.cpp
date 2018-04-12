@@ -1,15 +1,15 @@
 #include <openrave/plugin.h>
 #include <boost/bind.hpp>
 #include "MCSimulator.h"
-using namespace OpenRAVE;
 
+using namespace OpenRAVE;
 
 class MCModule : public ModuleBase
 {
 public:
     MCSimulator sim;
     
-    MCModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv) {
+    MCModule(EnvironmentBasePtr penv, std::istream& ss) : ModuleBase(penv),sim(penv) {
         RegisterCommand("MyCommand",boost::bind(&MCModule::MyCommand,this,_1,_2),
                         "This is an example command");
         RegisterCommand("ArmaCommand",boost::bind(&MCModule::ArmaCommand,this,_1,_2),
@@ -34,9 +34,16 @@ public:
                         "This is to initialize the trajectory");
         RegisterCommand("setOdometry",boost::bind(&MCModule::setOdometry,this,_1,_2),
                         "This is to initialize the odometry");
+        RegisterCommand("runSimulation",boost::bind(&MCModule::runSimulation,this,_1,_2),
+                        "This is to run a MC simulation");
 
     }
     virtual ~MCModule() {}
+
+    //Run MC simulation
+    bool runSimulation(std::ostream& sout, std::istream& sinput){
+        sim.runSimulation();
+    }
 
     bool setTrajectory(std::ostream& sout, std::istream& sinput){
         int length = sim.getPathLength();

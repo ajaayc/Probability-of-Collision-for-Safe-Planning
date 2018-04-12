@@ -110,6 +110,8 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
+    MCModule.SendCommand('runSimulation')
+
     # start = time.clock()
     # with env:
     #     goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]
