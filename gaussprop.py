@@ -53,7 +53,7 @@ class Gauss_Prop():
 
         #Initial robot position and covariance
         self.initialStateMean = []
-        self.initialStateCovariance = []
+        self.initialStateCovariance = .001 * np.identity(3)
         
     #Initializes linear space constraints
     def initConstraints(self):
@@ -300,7 +300,7 @@ class Gauss_Prop():
     #len(controls) = len(trajectory) - 1
     def EKF_GaussProp(self,trajectory,controlinputs):
         self.initialStateMean = trajectory[0]
-        self.initialStateCovariance = .001 * np.identity(3)
+        self.initialStateCovariance = self.initialStateCovariance
 
         realpath = []
         

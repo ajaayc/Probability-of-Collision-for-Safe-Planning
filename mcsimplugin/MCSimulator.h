@@ -26,10 +26,38 @@ class MCSimulator{
 
     //Particles
     int numParticles;
+
+    //Covariance of state
+    arma::Mat<double> covariance;
+
+    //Trajectory and odometry
+    arma::Mat<double> trajectory;
+    arma::Mat<double> odometry;
+    
+    //pathlength
+    int pathlength;
 public:
     MCSimulator(){
         alphas = ones<arma::Mat<double> >(1,4);
         std::cout << "Inside MCSimulator constructor" << std::endl;
+    }
+
+    void setTrajectory(const arma::Mat<double>& trajectory){
+        this->trajectory = trajectory;
+        std::cout << "C++ Got Trajectory:" << std::endl;
+        std::cout << this->trajectory << std::endl;
+    }
+    
+    void setOdometry(const arma::Mat<double>& odometry){
+        this->odometry = odometry;
+        std::cout << "C++ Got Odometry:" << std::endl;
+        std::cout << this->odometry << std::endl;
+    }
+
+    void setInitialCovariance(const arma::Mat<double>& cov){
+        this->covariance = cov;
+        std::cout << "C++ Got initial covariance:" << std::endl;
+        std::cout << cov << std::endl;
     }
 
     void setNumParticles(int num){
@@ -38,13 +66,21 @@ public:
         std::cout << this->numParticles << std::endl;
     }
 
+    void setPathLength(int length){
+        this->pathlength = length;
+    }
+
+    int getPathLength(){
+        return this->pathlength;
+    }
+
     void setNumLandmarks(int num){
         this->numLandmarks = num;
         std::cout << "C++ got numlandmarks: " << std::endl;
         std::cout << this->numLandmarks << std::endl;
     }
 
-    void setLandmarks(arma::Mat<double>& landmarks){
+    void setLandmarks(const arma::Mat<double>& landmarks){
         this->landmarks = landmarks;
         std::cout << "C++ got landmarks: " << std::endl;
         std::cout << this->landmarks << std::endl;

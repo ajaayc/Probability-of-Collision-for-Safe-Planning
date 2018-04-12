@@ -71,15 +71,44 @@ if __name__ == "__main__":
     MCModule.SendCommand('setAlphas ' + alphas)
     MCModule.SendCommand('setQ ' + str(prop.Q))
 
-    import pdb
-    pdb.set_trace()
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
     numParticles = 1000
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
-    # #set start config
+
+    #Send initial covariance matrix
+    strcov = list2String(list(prop.initialStateCovariance[0,:])) + list2String(list(prop.initialStateCovariance[1,:])) + list2String(list(prop.initialStateCovariance[2,:]))
+    MCModule.SendCommand('setInitialCovariance ' + strcov)
+
+
+    
+    # Send motion plan and odometry to C++
+    #Load trajectory and odometry
+    file_temp = open('trajectory.dat','rb')
+    trajectory = pickle.load(file_temp)
+    file_temp.close()
+
+    file_temp = open('odometry.dat','rb')
+    odometry = pickle.load(file_temp)
+    file_temp.close()
+
+    pathlen = len(trajectory)
+    
+    MCModule.SendCommand('setPathLength ' + str(pathlen))
+
+    trajectory = np.array(trajectory).transpose()
+    odometry = np.array(odometry).transpose()
+
+    import pdb
+    pdb.set_trace()
+
+    #Send trajectory
+    strtraj = list2String((trajectory[0,:]).tolist()) + list2String((trajectory[1,:]).tolist()) + list2String((trajectory[2,:]).tolist())
+    strodometry = list2String((odometry[0,:]).tolist()) + list2String((odometry[1,:]).tolist()) + list2String((odometry[2,:]).tolist())
+    MCModule.SendCommand('setTrajectory ' + strtraj)
+    MCModule.SendCommand('setOdometry ' + strodometry)
 
     # start = time.clock()
     # with env:

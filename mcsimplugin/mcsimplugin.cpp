@@ -25,9 +25,72 @@ public:
         RegisterCommand("setNumParticles",boost::bind(&MCModule::setNumParticles,this,_1,_2),
                         "This is to initialize number of landmark locations");
 
+        RegisterCommand("setInitialCovariance",boost::bind(&MCModule::setInitialCovariance,this,_1,_2),
+                        "This is to initialize first state covariance uncertainty");
+
+        RegisterCommand("setPathLength",boost::bind(&MCModule::setPathLength,this,_1,_2),
+                        "This is to initialize the length of the path");
+        RegisterCommand("setTrajectory",boost::bind(&MCModule::setTrajectory,this,_1,_2),
+                        "This is to initialize the trajectory");
+        RegisterCommand("setOdometry",boost::bind(&MCModule::setOdometry,this,_1,_2),
+                        "This is to initialize the odometry");
+
     }
     virtual ~MCModule() {}
 
+    bool setTrajectory(std::ostream& sout, std::istream& sinput){
+        int length = sim.getPathLength();
+
+        arma::Mat<double> traj = zeros<arma::Mat<double> >(3,length);
+        double val;
+        
+        for(int component=0; component < 3; ++component){
+            for(int i=0; i < length; ++i){
+                sinput >> val;
+                traj(component,i) = val;
+            }
+        }
+
+        sim.setTrajectory(traj);
+    }
+    
+    bool setOdometry(std::ostream& sout, std::istream& sinput){
+        int length = sim.getPathLength() - 1;
+
+        arma::Mat<double> odom = zeros<arma::Mat<double> >(3,length);
+        double val;
+        
+        for(int component=0; component < 3; ++component){
+            for(int i=0; i < length; ++i){
+                sinput >> val;
+                odom(component,i) = val;
+            }
+        }
+
+        sim.setOdometry(odom);
+    }
+
+    bool setPathLength(std::ostream& sout, std::istream& sinput){
+        int length;
+        sinput >> length;
+        sim.setPathLength(length);
+    }
+
+    bool setInitialCovariance(std::ostream& sout, std::istream& sinput){
+        arma::Mat<double> cov = zeros<arma::Mat<double> >(3,3);
+
+        double val;
+        
+        for(int i = 0; i < 3; ++i){
+            for(int j = 0; j < 3; ++j){
+                sinput >> val;
+                cov(i,j) = val;
+            }
+        }
+
+        sim.setInitialCovariance(cov);
+    }
+    
     bool setNumParticles(std::ostream& sout, std::istream& sinput){
         int num;
         sinput >> num;
