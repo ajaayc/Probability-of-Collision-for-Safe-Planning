@@ -101,8 +101,8 @@ if __name__ == "__main__":
     trajectory = np.array(trajectory).transpose()
     odometry = np.array(odometry).transpose()
 
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
 
     #Send trajectory
     strtraj = list2String((trajectory[0,:]).tolist()) + list2String((trajectory[1,:]).tolist()) + list2String((trajectory[2,:]).tolist())
