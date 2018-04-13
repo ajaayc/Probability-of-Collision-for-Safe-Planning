@@ -6,6 +6,8 @@
 #include <openrave/plugin.h>
 #include <cassert>
 
+//#define USEDEBUG
+
 #ifdef USEDEBUG
 #define Debug(x) std::cout << x
 #else
@@ -214,10 +216,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     
     // Run the MC simulation to get the probability of collision
     void runSimulation(){
+        std::cout << "C++ Entered runSimulation" << std::endl;
         mu = initialmu;
         cov = initialcovariance;
         //Initialize particles
         initParticles();
+        std::cout << "C++ finished init particles" << std::endl;
         EKF_GaussProp();
     }
 
@@ -250,9 +254,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         double drot2 = motioncmd(2,0);
 
         double alphas1 = this->alphas(0,0);
-        double alphas2 = this->alphas(1,0);
-        double alphas3 = this->alphas(2,0);
-        double alphas4 = this->alphas(3,0);
+        double alphas2 = this->alphas(0,1);
+        double alphas3 = this->alphas(0,2);
+        double alphas4 = this->alphas(0,3);
 
         arma::Mat<double> noisymotion = zeros<arma::Mat<double>>(3,1);
         
@@ -354,9 +358,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         double drot2 = motioncmd(2,0);
 
         double alphas1 = this->alphas(0,0);
-        double alphas2 = this->alphas(1,0);
-        double alphas3 = this->alphas(2,0);
-        double alphas4 = this->alphas(3,0);
+        double alphas2 = this->alphas(0,1);
+        double alphas3 = this->alphas(0,2);
+        double alphas4 = this->alphas(0,3);
 
         arma::Mat<double> M = zeros<arma::Mat<double>>(3,3);
 
@@ -416,6 +420,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //len(controls) = len(trajectory) - 1
 
     void EKF_GaussProp(){
+        std::cout << "C++ Entered Gaussprop" << std::endl;
         arma::Mat<double>& trajectoryi = this->trajectory;
         arma::Mat<double>& controlinputs = this->odometry;
         
@@ -425,27 +430,40 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
         //Initialize realpath
         arma::Mat<double> realpath = zeros<arma::Mat<double>>(3,this->pathlength);
+        std::cout << "C++ made realpath" << std::endl;
 
         arma::Mat<double> realstate = mu;
         //Store the real state (we don't know this in practice)
         realpath.col(0) = realstate;
 
+
+        std::cout << "C++ begin loop through trajectory" << std::endl;
         //simulate trajectory. Loop through all control inputs
         for(int i = 0; i < this->pathlength - 1; ++i){
+            Debug("C++ inside loop through trajectory" << std::endl;)
+            Debug("Iteration " << i << std::endl;)
             arma::Mat<double> control = controlinputs.col(i);
+            Debug("C++ got control "<< control << std::endl;)
             //Get motion command
             arma::Mat<double> motionCommand = controlinputs.col(i);
-
+            Debug("C++ got motioncommand "<< motionCommand << std::endl;)
+                
             arma::Mat<double> M = this->generateM_EKF(motionCommand);
+            Debug("C++ got M "<< M << std::endl;)
             double Q = this->Q;
 
             //Get control gain to move to next state
             arma::Mat<double> nominalstate = trajectoryi.col(i);
+            Debug("C++ got nominalstate "<< nominalstate << std::endl;)
             arma::Mat<double> estimatedstate = mu;
             arma::Mat<double> nominalgoal = trajectoryi.col(i+1);
+            Debug("C++ got nominalgoal "<< nominalgoal << std::endl;)
             arma::Mat<double> nominalcontrol = controlinputs.col(i);
+            Debug("C++ got nominalcontrol "<< nominalcontrol << std::endl;)
 
             arma::Mat<double> gain = this->generateL(nominalstate,estimatedstate,nominalgoal,nominalcontrol);
+
+            Debug("L matrix " << gain << std::endl;)
             
             //Multiply gain by deviation in state to get deviation to add to u*
             arma::Mat<double> statedeviation = estimatedstate - nominalstate;
@@ -458,35 +476,43 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             arma::Mat<double> appliedcontrol = nominalcontrol + controldeviation;
             //appliedcontrol = appliedcontrol[0]
 
+            Debug("applied control " << appliedcontrol << std::endl;)
+
             //------------------------------------------------------------
             //EKF Predict. Predict where we'll go based on applied control
             arma::Mat<double> predMu;
             arma::Mat<double> predSigma;
             this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+            Debug("Finished EKFpredict" << std::endl;)
             //------------------------------------------------------------
 
             //Now move (with noise)
             //Add noise to odometry to go to another state
             arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol);
+            Debug("C++ got nextstate "<< nextstate << std::endl;)
             realstate = nextstate;
             realpath.col(i+1) = realstate;
             //print 'realstate: ', realstate
-            std::cout << "realstate: " << realstate << std::endl;
+            std::cout << "realstate: " << std::endl << realstate << std::endl;
             
             arma::Mat<double> realobservations = zeros<arma::Mat<double>>(1,this->numLandmarks);
             
             //Get sensor measurements from the real state. Loop
             //through all landmarks
+            Debug("C++ looping through measurements"  << std::endl;)
             for(int currlid = 0; currlid < this->numLandmarks; ++currlid){
                 double z = this->sampleObservation(realstate,currlid);
                 realobservations(0,currlid) = z;
             }
+            Debug("Finished getting measurements" << std::endl;)
             
             //------------------------------------------------------------
             //EKF Update of estimated state and covariance based on the measurements
             arma::Mat<double> newmu;
             arma::Mat<double> newsigma;
+            Debug("C++ entering EKFupdate"  << std::endl;)
             this->EKFupdate(predMu,predSigma,realobservations,Q,newmu,newsigma);
+            Debug("C++ finished EKFupdate" << std::endl;)
             this->mu = newmu;
             this->cov = newsigma;
 
@@ -494,9 +520,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             //print 'estimatestate: ', mu
             //print 'estimatecov: ', cov
             
-            std::cout << 'nominalstate: ' << trajectoryi.col(i+1) << std::endl;
-            std::cout << 'estimatestate: ' <<  this->mu << std::endl;
-            std::cout << 'estimatecov: ' << this->cov << std::endl;
+            std::cout << "nominalstate: " << std::endl << trajectoryi.col(i+1) << std::endl;
+            std::cout << "estimatestate: " << std::endl <<  this->mu << std::endl;
+            std::cout << "estimatecov: " << std::endl << this->cov << std::endl;
 
             //
             //------------------------------------------------------------
@@ -523,9 +549,11 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
 
         void EKFupdate(arma::Mat<double>& predMu,arma::Mat<double>& predSigma,arma::Mat<double>& measurements,double Q, arma::Mat<double>& newmu,arma::Mat<double>& newsigma){
+        Debug("C++ inside EKFupdate"  << std::endl;)
         //Loop through all measurements
         for(int lid = 0; lid < measurements.n_cols; ++lid){
         double measurement = measurements(0,lid);
+        Debug("measurement: " << measurement  << std::endl;)
 
         //listd is landmark id. measurement is the distance
         //to the landmark recorded by sensor
@@ -534,22 +562,33 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
         // Lines 10-13 of EKF Algorithm
         arma::Mat<double> H = this->makeHRow(predMu,lid);
-
+        H = H.t();
+        Debug("H row: " << H  << std::endl;)
+            
         //Innovation / residual covariance
 
         arma::Mat<double> S = H * predSigma * H.t() + Q;
+        Debug("S: " << S  << std::endl;)
 
         // Kalman gain
         arma::Mat<double> K = predSigma * H.t() * S.i();
+        Debug("K: " << K  << std::endl;)
 
         //z and zhat
         double z = measurement;
         double zhat = this->observation(predMu,lid);
+        Debug("z: " << z  << std::endl;)
+        Debug("zhat: " << zhat  << std::endl;)
             
         // Correction
         double temp = z - zhat;
-        predMu = predMu.t() + K * (temp);
+        Debug("temp: " << temp  << std::endl;)
+        Debug("predMu: " << predMu  << std::endl;)
+        predMu = predMu + K * (temp);
+        Debug("predMu: " << predMu  << std::endl;)
         predSigma = (eye<arma::Mat<double>>(3,3) - K * H) * predSigma;
+        Debug("predSigma: " << predSigma  << std::endl;)
+        int x = 5;
     }
             
 
