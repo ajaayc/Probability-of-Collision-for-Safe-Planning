@@ -6,7 +6,7 @@
 #include <openrave/plugin.h>
 #include <cassert>
 
-//#define USEDEBUG
+#define USEDEBUG
 
 #ifdef USEDEBUG
 #define Debug(x) std::cout << x
@@ -21,17 +21,11 @@ using namespace arma;
 
 typedef std::vector<double> config;
 
-#ifdef USEDEBUG
-#define Debug(x) std::cout << x
-#else
-#define Debug(x) 
-#endif 
-
-double squareNum(double num){
+inline double squareNum(double num){
     return num * num;
 }
 
-double sampleNormal(double mean,double variance){
+inline double sampleNormal(double mean,double variance){
     return mean + randn() * sqrt(variance);
 }
 
@@ -56,8 +50,8 @@ inline void roundAngle(arma::Mat<double>& minp){
     minp.for_each( [](mat::elem_type& val) { double x = angleWrap(val); val = x; } );
 }
 
-//3 x 1 Arma matrix to double vector
-bool arma2Vector(const arma::Mat<double>& mconfig, std::vector<double> config){
+//3 x 1 Arma matrix to double vector. stores result in config
+void arma2Vector(const arma::Mat<double>& mconfig, std::vector<double>& config){
     config.resize(3);
     config[0] = (mconfig(0,0));
     config[1] = (mconfig(1,0));
@@ -79,7 +73,7 @@ class MCSimulator{
     arma::Mat<double> mcparticles;
     //1 x pathlength matrix representing number of times each particle
     //collided following the MC simulation conclusion
-    arma::Mat<unsigned short> particlecollisions;
+    arma::Mat<unsigned int> particlecollisions;
     
     //Covariance and mean of state
     arma::Mat<double> cov;
@@ -191,7 +185,11 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     bool checkCollision(arma::Mat<double>& mconfig){
         std::vector<double> configx;
         arma2Vector(mconfig, configx);
-
+        Debug("C++ inside  checkCollision. Here's vector:"  << std::endl;);
+        for (unsigned i = 0; i < configx.size(); ++i){
+            Debug(configx[i]  << std::endl;);
+        }
+        Debug("Finished printing vector."  << std::endl;);
         return checkCollision(configx);
     }
 
@@ -219,7 +217,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         mcparticles = mvnrnd(initialmu, initialcovariance, numParticles);
 
         //Set particlecollision matrix
-        particlecollisions = zeros<arma::Mat<unsigned short>>(1,numParticles);
+        particlecollisions = zeros<arma::Mat<unsigned int>>(1,numParticles);
 
         std::cout << "C++ made initial particles: " << std::endl;
         std::cout << mcparticles << std::endl;
@@ -252,11 +250,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
     //Sees if particles are in collision with openrave environment
     void checkParticleCollisions(){
+        Debug("C++ entered checkParticleCollisions" << std::endl;);
         //loop through all particles
         for(int i = 0; i < this->numParticles; ++i){
             //Get curr particle
             arma::Mat<double> currp = this->mcparticles.col(i);
             //Check collision
+            Debug("C++ about to checkCollision" << std::endl;);
+            Debug("currp: " << std::endl << currp << std::endl;);
             bool collided = checkCollision(currp);
             if(collided){
                 ++particlecollisions(0,i);

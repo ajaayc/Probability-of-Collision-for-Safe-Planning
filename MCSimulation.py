@@ -59,6 +59,10 @@ if __name__ == "__main__":
     # tuck in the PR2's arms for driving
     tuckarms(env,robot);
 
+    with env:
+        # the active DOF are translation in X and Y and rotation about the Z axis of the base of the robot.
+        robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
+
     room = env.GetBodies()[0]
 
     #Initialize gaussian propagation object
@@ -74,7 +78,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 10
+    numParticles = 100
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
