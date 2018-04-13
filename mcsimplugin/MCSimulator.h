@@ -213,6 +213,15 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "C++ made initial particles: " << std::endl;
         std::cout << mcparticles << std::endl;
     }
+
+    void moveParticles(arma::Mat<double>& motioncmd){
+        //Move all particles with the input command
+        
+    }
+
+    //Sees if particles are in collision with openrave environment
+    void checkParticleCollisions(){
+    }
     
     // Run the MC simulation to get the probability of collision
     void runSimulation(){
@@ -248,7 +257,8 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
     
     //Generates pose following a noisy control input
-    arma::Mat<double> sampleOdometry(arma::Mat<double>& state,arma::Mat<double>& motioncmd){
+    //Modifies noisymotion, which is the actual odometry that robot follows
+    arma::Mat<double> sampleOdometry(arma::Mat<double>& state,arma::Mat<double>& motioncmd, arma::Mat<double>& noisymotion){
         double drot1 = motioncmd(0,0);
         double dtrans = motioncmd(1,0);
         double drot2 = motioncmd(2,0);
@@ -258,7 +268,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         double alphas3 = this->alphas(0,2);
         double alphas4 = this->alphas(0,3);
 
-        arma::Mat<double> noisymotion = zeros<arma::Mat<double>>(3,1);
+        noisymotion = zeros<arma::Mat<double>>(3,1);
         
         noisymotion(0,0) = sampleNormal(drot1,alphas1 * squareNum(drot1)+alphas2*squareNum(dtrans));
         noisymotion(1,0) = sampleNormal(dtrans,alphas3 * squareNum(dtrans)+alphas4*(squareNum(drot1)+squareNum(drot2)));
@@ -488,7 +498,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
             //Now move (with noise)
             //Add noise to odometry to go to another state
-            arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol);
+            //noisymotion is the noisy odometry robot actually will follow in reality
+            arma::Mat<double> noisymotion;
+            arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol,noisymotion);
+
+            //-----------Move all particles for the MCSimulation-----------
+            moveParticles(noisymotion);
+            //-----------Move all particles for the MCSimulation-----------
+            
             Debug("C++ got nextstate "<< nextstate << std::endl;)
             realstate = nextstate;
             realpath.col(i+1) = realstate;
