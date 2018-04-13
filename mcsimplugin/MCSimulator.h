@@ -72,7 +72,7 @@ class MCSimulator{
     arma::Mat<double> mcparticles;
 
     //Covariance and mean of state
-    arma::Mat<double> covariance;
+    arma::Mat<double> cov;
     arma::Mat<double> mu;
 
     //Initial mean and covariance
@@ -128,10 +128,10 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << this->odometry << std::endl;
     }
 
-    void setInitialCovariance(const arma::Mat<double>& cov){
-        this->initialcovariance = cov;
+    void setInitialCovariance(const arma::Mat<double>& covin){
+        this->initialcovariance = covin;
         std::cout << "C++ Got initial covariance:" << std::endl;
-        std::cout << cov << std::endl;
+        std::cout << covin << std::endl;
     }
 
     void setNumParticles(int num){
@@ -206,7 +206,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     void initParticles(){
         //Initialize particles
         //Use mean and covariance
-        mcparticles = mvnrnd(mu, covariance, numParticles);
+        mcparticles = mvnrnd(initialmu, initialcovariance, numParticles);
 
         std::cout << "C++ made initial particles: " << std::endl;
         std::cout << mcparticles << std::endl;
@@ -215,7 +215,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     // Run the MC simulation to get the probability of collision
     void runSimulation(){
         mu = initialmu;
-        covariance = initialcovariance;
+        cov = initialcovariance;
         //Initialize particles
         initParticles();
     }
@@ -403,8 +403,157 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         L(0,0) = ubar(0,0) / (xhatt(0,0) != 0 ? xhatt(0,0) : 0.1);
         L(1,1) = ubar(1,0) / (xhatt(1,0) != 0 ? xhatt(1,0) : 0.1);
         L(2,2) = ubar(2,0) / (xhatt(2,0) != 0 ? xhatt(2,0) : 0.1);
-
+        
         return L;
+    }
+
+    //------------------------------------------------------------
+    //Stuff below this is for the actual paper
+    //------------------------------------------------------------
+    //trajectory is list of states for the motion plan
+    //controlinputs is list of odometry commands to transition between states
+    //len(controls) = len(trajectory) - 1
+
+    void EKF_GaussProp(){
+        arma::Mat<double>& trajectoryi = this->trajectory;
+        arma::Mat<double>& controlinputs = this->odometry;
+        
+        //Initialize mean and covariance
+        this->mu = this->initialmu;
+        this->cov = this->initialcovariance;
+
+        //Initialize realpath
+        arma::Mat<double> realpath = zeros<arma::Mat<double>>(3,this->pathlength);
+
+        arma::Mat<double> realstate = mu;
+        //Store the real state (we don't know this in practice)
+        realpath.col(0) = realstate;
+
+        //simulate trajectory. Loop through all control inputs
+        for(int i = 0; i < this->pathlength - 1; ++i){
+            arma::Mat<double> control = controlinputs.col(i);
+            //Get motion command
+            arma::Mat<double> motionCommand = controlinputs.col(i);
+
+            arma::Mat<double> M = this->generateM_EKF(motionCommand);
+            double Q = this->Q;
+
+            //Get control gain to move to next state
+            arma::Mat<double> nominalstate = trajectoryi.col(i);
+            arma::Mat<double> estimatedstate = mu;
+            arma::Mat<double> nominalgoal = trajectoryi.col(i+1);
+            arma::Mat<double> nominalcontrol = controlinputs.col(i);
+
+            arma::Mat<double> gain = this->generateL(nominalstate,estimatedstate,nominalgoal,nominalcontrol);
+            
+            //Multiply gain by deviation in state to get deviation to add to u*
+            arma::Mat<double> statedeviation = estimatedstate - nominalstate;
+            //statedeviation = np.asmatrix(statedeviation).transpose()
+
+            arma::Mat<double> controldeviation = gain * statedeviation;
+            //controldeviation = controldeviation.transpose()
+
+            //Add control deviation to nominal control
+            arma::Mat<double> appliedcontrol = nominalcontrol + controldeviation;
+            //appliedcontrol = appliedcontrol[0]
+
+            //------------------------------------------------------------
+            //EKF Predict. Predict where we'll go based on applied control
+            arma::Mat<double> predMu;
+            arma::Mat<double> predSigma;
+            this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+            //------------------------------------------------------------
+
+            //Now move (with noise)
+            //Add noise to odometry to go to another state
+            arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol);
+            realstate = nextstate;
+            realpath.col(i+1) = realstate;
+            //print 'realstate: ', realstate
+            std::cout << "realstate: " << realstate << std::endl;
+            
+            arma::Mat<double> realobservations = zeros<arma::Mat<double>>(1,this->numLandmarks);
+            
+            //Get sensor measurements from the real state. Loop
+            //through all landmarks
+            for(int currlid = 0; currlid < this->numLandmarks; ++currlid){
+                double z = this->sampleObservation(realstate,currlid);
+                realobservations(0,currlid) = z;
+            }
+            
+            //------------------------------------------------------------
+            //EKF Update of estimated state and covariance based on the measurements
+            arma::Mat<double> newmu;
+            arma::Mat<double> newsigma;
+            this->EKFupdate(predMu,predSigma,realobservations,Q,newmu,newsigma);
+            this->mu = newmu;
+            this->cov = newsigma;
+
+            //print 'nominalstate: ', trajectoryi[i+1]
+            //print 'estimatestate: ', mu
+            //print 'estimatecov: ', cov
+            
+            std::cout << 'nominalstate: ' << trajectoryi.col(i+1) << std::endl;
+            std::cout << 'estimatestate: ' <<  this->mu << std::endl;
+            std::cout << 'estimatecov: ' << this->cov << std::endl;
+
+            //
+            //------------------------------------------------------------
+        }
+        
+        //return realpath;
+    }
+        
+        //Modifies predMu and predSigma. Others are untouched
+
+        void EKFpredict(arma::Mat<double>& mu, arma::Mat<double>& Sigma,arma::Mat<double>& u, arma::Mat<double>& M, double Q, arma::Mat<double>& predMu, arma::Mat<double>& predSigma){
+        //Get G matrix and V matrix
+        arma::Mat<double> G = this->generateG_EKF(mu,u);
+        arma::Mat<double> V = this->generateV_EKF(mu,u);
+
+        //noise in odometry
+        arma::Mat<double> R = V * M * V.t();
+
+        //Return values
+        predMu = this->prediction(mu,u);
+        predSigma = G * Sigma * G.t() + R;
+
+        return;
+    }
+
+        void EKFupdate(arma::Mat<double>& predMu,arma::Mat<double>& predSigma,arma::Mat<double>& measurements,double Q, arma::Mat<double>& newmu,arma::Mat<double>& newsigma){
+        //Loop through all measurements
+        for(int lid = 0; lid < measurements.n_cols; ++lid){
+        double measurement = measurements(0,lid);
+
+        //listd is landmark id. measurement is the distance
+        //to the landmark recorded by sensor
+        double landmark_x = this->landmarks(0,lid);
+        double landmark_y = this->landmarks(1,lid);
+
+        // Lines 10-13 of EKF Algorithm
+        arma::Mat<double> H = this->makeHRow(predMu,lid);
+
+        //Innovation / residual covariance
+
+        arma::Mat<double> S = H * predSigma * H.t() + Q;
+
+        // Kalman gain
+        arma::Mat<double> K = predSigma * H.t() * S.i();
+
+        //z and zhat
+        double z = measurement;
+        double zhat = this->observation(predMu,lid);
+            
+        // Correction
+        double temp = z - zhat;
+        predMu = predMu.t() + K * (temp);
+        predSigma = (eye<arma::Mat<double>>(3,3) - K * H) * predSigma;
+    }
+            
+
+        newmu = predMu;
+        newsigma = predSigma;
     }
 
 };
