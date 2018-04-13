@@ -33,7 +33,7 @@ class Gauss_Prop():
         self.alphas = []
         # Motion noise (in odometry space, see Table 5.5, p.134 in book).
         # variance of noise proportional to alphas
-        self.alphas = np.square(np.array([0.01, 0.1, 0.01, 0.01]))
+        self.alphas = np.square(np.array([0.00025, 0.0025, 0.0025, 0.0025]))
 
         # Variance of Gaussian sensor noise (distance to landmark)
         self.Q_noise = np.square(0.2)

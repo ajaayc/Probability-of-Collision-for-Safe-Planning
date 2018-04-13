@@ -39,7 +39,8 @@ if __name__ == "__main__":
 
     env.Reset()        
     # load a scene from ProjectRoom environment XML file
-    env.Load('pr2custom.env.xml')
+    #env.Load('pr2custom.env.xml')
+    env.Load('data/pr2test2.env.xml')
     time.sleep(0.1)
 
     # 1) get the 1st robot that is inside the loaded scene
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 100
+    numParticles = 300
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
@@ -114,8 +115,12 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
+    start = time.clock()
     MCModule.SendCommand('runSimulation')
-
+    end = time.clock()
+    print "Python Simulation Time: ", end - start
+    
+    
     # start = time.clock()
     # with env:
     #     goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]

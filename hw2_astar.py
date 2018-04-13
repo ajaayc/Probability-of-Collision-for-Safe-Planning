@@ -67,11 +67,16 @@ if __name__ == "__main__":
     collisionChecker = RaveCreateCollisionChecker(env,'ode')
     env.SetCollisionChecker(collisionChecker)
 
-
+    environments = ['pr2custom.env.xml','data/pr2test2.env.xml']
+    goals =        [[2.28,0.11,0],      [2.6,-1.3,-pi/2]]
+    #Change this to specify configuration you want
+    envindex = 1
+    
     env.Reset()
     # load a scene from ProjectRoom environment XML file
     #env.Load('data/pr2test2.env.xml')
-    env.Load('pr2custom.env.xml')
+    #env.Load('pr2custom.env.xml')
+    env.Load(environments[envindex])
     #env.Load('data/ikeatable.kinbody.xml')
     #env.Load('playbox.kinbody.xml')
     time.sleep(0.1)
@@ -92,7 +97,7 @@ if __name__ == "__main__":
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         #import pdb
         #pdb.set_trace()
-        goalconfig = [2.28,0.11,0]
+        goalconfig = goals[envindex]
     
     #Drawing handles    
     handles = []
@@ -114,7 +119,7 @@ if __name__ == "__main__":
     #Penalize    
     angleWeight = 5
 
-    distanceDisc = 0.1
+    distanceDisc = 0.15
     angleDisc = np.pi/2
 
     room = env.GetBodies()[0]

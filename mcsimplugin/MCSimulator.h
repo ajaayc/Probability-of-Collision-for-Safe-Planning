@@ -6,12 +6,24 @@
 #include <openrave/plugin.h>
 #include <cassert>
 
-#define USEDEBUG
+#define USEDEBUG3
 
 #ifdef USEDEBUG
 #define Debug(x) std::cout << x
 #else
 #define Debug(x) 
+#endif
+
+#ifdef USEDEBUG2
+#define Debug2(x) std::cout << x
+#else
+#define Debug2(x) 
+#endif
+
+#ifdef USEDEBUG3
+#define Debug3(x) std::cout << x
+#else
+#define Debug3(x) 
 #endif
 
 using namespace OpenRAVE;
@@ -99,6 +111,9 @@ class MCSimulator{
 
 public:
 MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
+        //Random seed initialized
+        arma::arma_rng::set_seed_random();
+        
         alphas = ones<arma::Mat<double> >(1,4);
         std::cout << "Inside MCSimulator constructor" << std::endl;
 
@@ -248,6 +263,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         this->mcparticles = newstate;
     }
 
+    double getCollisionProportion(){
+        //Get nonzero elements
+        uvec nonzeros = find(this->particlecollisions);
+        //Num rows is the number of particles that had a collision
+        double proportion = static_cast<double>(nonzeros.n_rows)/numParticles;
+        return proportion;
+    }
+    
     //Sees if particles are in collision with openrave environment
     void checkParticleCollisions(){
         Debug("C++ entered checkParticleCollisions" << std::endl;);
@@ -496,7 +519,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "C++ begin loop through trajectory" << std::endl;
         //simulate trajectory. Loop through all control inputs
         for(int i = 0; i < this->pathlength - 1; ++i){
-            Debug("C++ inside loop through trajectory" << std::endl;);
+            Debug3("C++ on motioncmd "<< i << " of " << this->pathlength - 2 << "." << std::endl;);
             Debug("Iteration " << i << std::endl;);
             arma::Mat<double> control = controlinputs.col(i);
             Debug("C++ got control "<< control << std::endl;);
@@ -584,9 +607,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             //print 'estimatestate: ', mu
             //print 'estimatecov: ', cov
             
-            std::cout << "nominalstate: " << std::endl << trajectoryi.col(i+1) << std::endl;
-            std::cout << "estimatestate: " << std::endl <<  this->mu << std::endl;
-            std::cout << "estimatecov: " << std::endl << this->cov << std::endl;
+            Debug2("nominalstate: " << std::endl << trajectoryi.col(i+1) << std::endl);
+            Debug2("estimatestate: " << std::endl <<  this->mu << std::endl);
+            Debug2("estimatecov: " << std::endl << this->cov << std::endl);
 
             //
             //------------------------------------------------------------
@@ -597,6 +620,8 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "Finished MCSimulation." << std::endl;
         std::cout << "Particles:" << std::endl << this->mcparticles << std::endl;
         std::cout << "Collision:" << std::endl << this->particlecollisions << std::endl;
+        //Estimate of probability of collision
+        std::cout << "Proportion Collided:" << std::endl << getCollisionProportion() << std::endl;
     }
 
         //Modifies predMu and predSigma. Others are untouched
