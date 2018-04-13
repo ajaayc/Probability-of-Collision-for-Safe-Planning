@@ -218,6 +218,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         cov = initialcovariance;
         //Initialize particles
         initParticles();
+        EKF_GaussProp();
     }
 
     //Applies sensor model based on given landmark id
@@ -503,7 +504,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         
         //return realpath;
     }
-        
+
         //Modifies predMu and predSigma. Others are untouched
 
         void EKFpredict(arma::Mat<double>& mu, arma::Mat<double>& Sigma,arma::Mat<double>& u, arma::Mat<double>& M, double Q, arma::Mat<double>& predMu, arma::Mat<double>& predSigma){
