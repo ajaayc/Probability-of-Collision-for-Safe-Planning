@@ -51,6 +51,11 @@ inline double roundAngle(double angle){
     return angleWrap(angle);
 }
 
+//Arma matrix
+inline void roundAngle(arma::Mat<double>& minp){
+    minp.for_each( [](mat::elem_type& val) { double x = angleWrap(val); val = x; } );
+}
+
 //3 x 1 Arma matrix to double vector
 bool arma2Vector(const arma::Mat<double>& mconfig, std::vector<double> config){
     config.resize(3);
@@ -72,7 +77,10 @@ class MCSimulator{
     //Particles
     int numParticles;
     arma::Mat<double> mcparticles;
-
+    //1 x pathlength matrix representing number of times each particle
+    //collided following the MC simulation conclusion
+    arma::Mat<unsigned short> particlecollisions;
+    
     //Covariance and mean of state
     arma::Mat<double> cov;
     arma::Mat<double> mu;
@@ -181,10 +189,10 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
     //Overloaded. Takes in 3 x 1 arma matrix
     bool checkCollision(arma::Mat<double>& mconfig){
-        std::vector<double> config;
-        arma2Vector(mconfig, config);
+        std::vector<double> configx;
+        arma2Vector(mconfig, configx);
 
-        return checkCollision(config);
+        return checkCollision(configx);
     }
 
     //Returns true if config is in collision
@@ -210,27 +218,55 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         //Use mean and covariance
         mcparticles = mvnrnd(initialmu, initialcovariance, numParticles);
 
+        //Set particlecollision matrix
+        particlecollisions = zeros<arma::Mat<unsigned short>>(1,numParticles);
+
         std::cout << "C++ made initial particles: " << std::endl;
         std::cout << mcparticles << std::endl;
     }
 
+    //motioncmd is 3x1. Vectorized prediction operation on particles
     void moveParticles(arma::Mat<double>& motioncmd){
         //Move all particles with the input command
+        double drot1 = motioncmd(0,0);
+        double dtrans = motioncmd(1,0);
+        double drot2 = motioncmd(2,0);
+
+        arma::Mat<double> x = mcparticles.row(0);
+        arma::Mat<double> y = mcparticles.row(1);
+        arma::Mat<double> theta = mcparticles.row(2);
         
+        arma::Mat<double> newstate = zeros<arma::Mat<double>>(3,numParticles);
+
+        newstate.row(0) = x + dtrans * cos(theta + drot1);
+        newstate.row(1) = y + dtrans * sin(theta + drot1);
+        newstate.row(2) = theta + drot1 + drot2;
+
+        //Round angle on row(2). Use vectorized matrix function
+        arma::Mat<double> row2 = newstate.row(2);
+        roundAngle(row2);
+        newstate.row(2) = row2;
+
+        this->mcparticles = newstate;
     }
 
     //Sees if particles are in collision with openrave environment
     void checkParticleCollisions(){
+        //loop through all particles
+        for(int i = 0; i < this->numParticles; ++i){
+            //Get curr particle
+            arma::Mat<double> currp = this->mcparticles.col(i);
+            //Check collision
+            bool collided = checkCollision(currp);
+            if(collided){
+                ++particlecollisions(0,i);
+            }
+        }
     }
     
     // Run the MC simulation to get the probability of collision
     void runSimulation(){
-        std::cout << "C++ Entered runSimulation" << std::endl;
-        mu = initialmu;
-        cov = initialcovariance;
-        //Initialize particles
-        initParticles();
-        std::cout << "C++ finished init particles" << std::endl;
+        std::cout << "C++ Entered runSimulation" << std::endl;        
         EKF_GaussProp();
     }
 
@@ -438,6 +474,15 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         this->mu = this->initialmu;
         this->cov = this->initialcovariance;
 
+        //--------------------------------------------------------
+        //Initialize particles
+        initParticles();
+        Debug("C++ finished init particles" << std::endl;);
+        //Check collisions
+        checkParticleCollisions();
+        //--------------------------------------------------------
+        
+
         //Initialize realpath
         arma::Mat<double> realpath = zeros<arma::Mat<double>>(3,this->pathlength);
         std::cout << "C++ made realpath" << std::endl;
@@ -450,30 +495,30 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "C++ begin loop through trajectory" << std::endl;
         //simulate trajectory. Loop through all control inputs
         for(int i = 0; i < this->pathlength - 1; ++i){
-            Debug("C++ inside loop through trajectory" << std::endl;)
-            Debug("Iteration " << i << std::endl;)
+            Debug("C++ inside loop through trajectory" << std::endl;);
+            Debug("Iteration " << i << std::endl;);
             arma::Mat<double> control = controlinputs.col(i);
-            Debug("C++ got control "<< control << std::endl;)
+            Debug("C++ got control "<< control << std::endl;);
             //Get motion command
             arma::Mat<double> motionCommand = controlinputs.col(i);
-            Debug("C++ got motioncommand "<< motionCommand << std::endl;)
+            Debug("C++ got motioncommand "<< motionCommand << std::endl;);
                 
             arma::Mat<double> M = this->generateM_EKF(motionCommand);
-            Debug("C++ got M "<< M << std::endl;)
+            Debug("C++ got M "<< M << std::endl;);
             double Q = this->Q;
 
             //Get control gain to move to next state
             arma::Mat<double> nominalstate = trajectoryi.col(i);
-            Debug("C++ got nominalstate "<< nominalstate << std::endl;)
+            Debug("C++ got nominalstate "<< nominalstate << std::endl;);
             arma::Mat<double> estimatedstate = mu;
             arma::Mat<double> nominalgoal = trajectoryi.col(i+1);
-            Debug("C++ got nominalgoal "<< nominalgoal << std::endl;)
+            Debug("C++ got nominalgoal "<< nominalgoal << std::endl;);
             arma::Mat<double> nominalcontrol = controlinputs.col(i);
-            Debug("C++ got nominalcontrol "<< nominalcontrol << std::endl;)
+            Debug("C++ got nominalcontrol "<< nominalcontrol << std::endl;);
 
             arma::Mat<double> gain = this->generateL(nominalstate,estimatedstate,nominalgoal,nominalcontrol);
 
-            Debug("L matrix " << gain << std::endl;)
+            Debug("L matrix " << gain << std::endl;);
             
             //Multiply gain by deviation in state to get deviation to add to u*
             arma::Mat<double> statedeviation = estimatedstate - nominalstate;
@@ -486,14 +531,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             arma::Mat<double> appliedcontrol = nominalcontrol + controldeviation;
             //appliedcontrol = appliedcontrol[0]
 
-            Debug("applied control " << appliedcontrol << std::endl;)
+            Debug("applied control " << appliedcontrol << std::endl;);
 
             //------------------------------------------------------------
             //EKF Predict. Predict where we'll go based on applied control
             arma::Mat<double> predMu;
             arma::Mat<double> predSigma;
             this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
-            Debug("Finished EKFpredict" << std::endl;)
+            Debug("Finished EKFpredict" << std::endl;);
             //------------------------------------------------------------
 
             //Now move (with noise)
@@ -503,10 +548,11 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol,noisymotion);
 
             //-----------Move all particles for the MCSimulation-----------
-            moveParticles(noisymotion);
+            this->moveParticles(noisymotion);
+            this->checkParticleCollisions();
             //-----------Move all particles for the MCSimulation-----------
             
-            Debug("C++ got nextstate "<< nextstate << std::endl;)
+            Debug("C++ got nextstate "<< nextstate << std::endl;);
             realstate = nextstate;
             realpath.col(i+1) = realstate;
             //print 'realstate: ', realstate
@@ -516,20 +562,20 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             
             //Get sensor measurements from the real state. Loop
             //through all landmarks
-            Debug("C++ looping through measurements"  << std::endl;)
+            Debug("C++ looping through measurements"  << std::endl;);
             for(int currlid = 0; currlid < this->numLandmarks; ++currlid){
                 double z = this->sampleObservation(realstate,currlid);
                 realobservations(0,currlid) = z;
             }
-            Debug("Finished getting measurements" << std::endl;)
+            Debug("Finished getting measurements" << std::endl;);
             
             //------------------------------------------------------------
             //EKF Update of estimated state and covariance based on the measurements
             arma::Mat<double> newmu;
             arma::Mat<double> newsigma;
-            Debug("C++ entering EKFupdate"  << std::endl;)
+            Debug("C++ entering EKFupdate"  << std::endl;);
             this->EKFupdate(predMu,predSigma,realobservations,Q,newmu,newsigma);
-            Debug("C++ finished EKFupdate" << std::endl;)
+            Debug("C++ finished EKFupdate" << std::endl;);
             this->mu = newmu;
             this->cov = newsigma;
 
@@ -546,6 +592,10 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         }
         
         //return realpath;
+        //Output collision matrix
+        std::cout << "Finished MCSimulation." << std::endl;
+        std::cout << "Particles:" << std::endl << this->mcparticles << std::endl;
+        std::cout << "Collision:" << std::endl << this->particlecollisions << std::endl;
     }
 
         //Modifies predMu and predSigma. Others are untouched
@@ -566,53 +616,52 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
 
         void EKFupdate(arma::Mat<double>& predMu,arma::Mat<double>& predSigma,arma::Mat<double>& measurements,double Q, arma::Mat<double>& newmu,arma::Mat<double>& newsigma){
-        Debug("C++ inside EKFupdate"  << std::endl;)
-        //Loop through all measurements
-        for(int lid = 0; lid < measurements.n_cols; ++lid){
-        double measurement = measurements(0,lid);
-        Debug("measurement: " << measurement  << std::endl;)
+            Debug("C++ inside EKFupdate"  << std::endl;);
+            //Loop through all measurements
+            for(int lid = 0; lid < measurements.n_cols; ++lid){
+                double measurement = measurements(0,lid);
+                Debug("measurement: " << measurement  << std::endl;);
 
-        //listd is landmark id. measurement is the distance
-        //to the landmark recorded by sensor
-        double landmark_x = this->landmarks(0,lid);
-        double landmark_y = this->landmarks(1,lid);
+                //listd is landmark id. measurement is the distance
+                //to the landmark recorded by sensor
+                double landmark_x = this->landmarks(0,lid);
+                double landmark_y = this->landmarks(1,lid);
 
-        // Lines 10-13 of EKF Algorithm
-        arma::Mat<double> H = this->makeHRow(predMu,lid);
-        H = H.t();
-        Debug("H row: " << H  << std::endl;)
+                // Lines 10-13 of EKF Algorithm
+                arma::Mat<double> H = this->makeHRow(predMu,lid);
+                H = H.t();
+                Debug("H row: " << H  << std::endl;);
             
-        //Innovation / residual covariance
+                //Innovation / residual covariance
 
-        arma::Mat<double> S = H * predSigma * H.t() + Q;
-        Debug("S: " << S  << std::endl;)
+                arma::Mat<double> S = H * predSigma * H.t() + Q;
+                Debug("S: " << S  << std::endl;);
 
-        // Kalman gain
-        arma::Mat<double> K = predSigma * H.t() * S.i();
-        Debug("K: " << K  << std::endl;)
+                // Kalman gain
+                arma::Mat<double> K = predSigma * H.t() * S.i();
+                Debug("K: " << K  << std::endl;);
 
-        //z and zhat
-        double z = measurement;
-        double zhat = this->observation(predMu,lid);
-        Debug("z: " << z  << std::endl;)
-        Debug("zhat: " << zhat  << std::endl;)
+                //z and zhat
+                double z = measurement;
+                double zhat = this->observation(predMu,lid);
+                Debug("z: " << z  << std::endl;);
+                Debug("zhat: " << zhat  << std::endl;);
             
-        // Correction
-        double temp = z - zhat;
-        Debug("temp: " << temp  << std::endl;)
-        Debug("predMu: " << predMu  << std::endl;)
-        predMu = predMu + K * (temp);
-        Debug("predMu: " << predMu  << std::endl;)
-        predSigma = (eye<arma::Mat<double>>(3,3) - K * H) * predSigma;
-        Debug("predSigma: " << predSigma  << std::endl;)
-        int x = 5;
-    }
+                // Correction
+                double temp = z - zhat;
+                Debug("temp: " << temp  << std::endl;);
+                Debug("predMu: " << predMu  << std::endl;);
+                predMu = predMu + K * (temp);
+                Debug("predMu: " << predMu  << std::endl;);
+                predSigma = (eye<arma::Mat<double>>(3,3) - K * H) * predSigma;
+                Debug("predSigma: " << predSigma  << std::endl;);
+                int x = 5;
+            }
             
 
-        newmu = predMu;
-        newsigma = predSigma;
-    }
-
+            newmu = predMu;
+            newsigma = predSigma;
+        }
 };
 
 
