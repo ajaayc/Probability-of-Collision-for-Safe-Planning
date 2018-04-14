@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import time
+import os
 import openravepy
 import numpy as np
 import sys
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 5000
+    numParticles = 10000
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
@@ -152,6 +153,15 @@ if __name__ == "__main__":
 
     simTimes = []
     proportions = []
+
+    #Use this file to store times and proportions if simulation is stopped in the middle
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    #print st
+    fname = 'checkpoint_' + st +  '.txt'
+
+    f2 = open(fname,'w')
+    
     for i in range(numSimulations):
         start = time.clock()
         collprop = MCModule.SendCommand('runSimulation')
@@ -161,8 +171,14 @@ if __name__ == "__main__":
         simTime = end - start
         print "Python Simulation Time: ", simTime
         simTimes.append(simTime)
+        f2.write('Simulation: ' + str(i) + '\n')
+        f2.write('simTime: ' + str(simTime) + '\n')
         proportions.append(collprop)
-
+        f2.write('collProp: ' + str(collprop) + '\n')
+        f2.flush()
+        os.fsync(f2.fileno())
+    f2.close()
+    
     print "SimTimes: \n", simTimes
     print "Collision Probs: \n", proportions
 
