@@ -289,9 +289,10 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
     
     // Run the MC simulation to get the probability of collision
-    void runSimulation(){
+    double runSimulation(){
         std::cout << "C++ Entered runSimulation" << std::endl;        
-        EKF_GaussProp();
+        double collprop = EKF_GaussProp();
+        return collprop;
     }
 
     //Applies sensor model based on given landmark id
@@ -489,7 +490,8 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //controlinputs is list of odometry commands to transition between states
     //len(controls) = len(trajectory) - 1
 
-    void EKF_GaussProp(){
+    //Returns proportion of particles that collided
+    double EKF_GaussProp(){
         std::cout << "C++ Entered Gaussprop" << std::endl;
         arma::Mat<double>& trajectoryi = this->trajectory;
         arma::Mat<double>& controlinputs = this->odometry;
@@ -621,7 +623,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "Particles:" << std::endl << this->mcparticles << std::endl;
         std::cout << "Collision:" << std::endl << this->particlecollisions << std::endl;
         //Estimate of probability of collision
-        std::cout << "Proportion Collided:" << std::endl << getCollisionProportion() << std::endl;
+        double collprop = getCollisionProportion();
+        std::cout << "Proportion Collided:" << std::endl << collprop << std::endl;
+        return collprop;
     }
 
         //Modifies predMu and predSigma. Others are untouched

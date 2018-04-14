@@ -6,10 +6,41 @@ import numpy as np
 import sys
 import traceback
 import gaussprop as gp
+import datetime
 
 if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
+
+def writeReport(numSimulations,envfile,alphas,Q,numlandmarks,landmarks,numparticles,initialcovariance,trajectory,odometry,simulationTimes,collisionProportions,simTimeAverage,collisionPropAverage):
+    print "Writing Report\n"
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    #print st
+    fname = 'simReport_' + st +  '.txt'
+    
+    f = open(fname,'w')
+    f.write('Environment: ' + str(envfile) + "\n")
+    f.write('Num Landmarks: ' + str(numlandmarks) + "\n")
+    f.write('Landmarks: \n' + str(landmarks) + "\n")
+
+    f.write('Alphas: \n' + str(alphas) + "\n")
+    f.write('Sensor Noise Variance: ' + str(Q) + "\n")
+    f.write('Initial Covariance: \n' + str(initialcovariance) + "\n")
+    f.write('---------------------------------\n')
+    f.write('NumSimulations: ' + str(numSimulations) + "\n")
+    f.write('Num Particles: ' + str(numparticles) + "\n")
+
+    f.write('Simulation Times: \n' + str(simulationTimes) + "\n")
+    f.write('Collision Proportions: \n' + str(collisionProportions) + "\n")
+    f.write('Average Sim Time: ' + str(simTimeAverage) + "\n")
+    f.write('Average Prob Collision: ' + str(collisionPropAverage) + "\n")
+    f.write('---------------------------------\n')
+    f.write('Trajectory: \n' + str(trajectory.transpose()) + "\n")
+    f.write('Odometry: \n' + str(odometry.transpose()) + "\n")
+
+    f.close()
+    
 
 #For sending configuration to C++
 def list2String(mylist):
@@ -40,7 +71,8 @@ if __name__ == "__main__":
     env.Reset()        
     # load a scene from ProjectRoom environment XML file
     #env.Load('pr2custom.env.xml')
-    env.Load('data/pr2test2.env.xml')
+    envfile = 'data/pr2test2.env.xml'
+    env.Load(envfile)
     time.sleep(0.1)
 
     # 1) get the 1st robot that is inside the loaded scene
@@ -74,12 +106,13 @@ if __name__ == "__main__":
     print "Sending alphas to C++:"
     alphas = list2String(list(prop.alphas))
     MCModule.SendCommand('setAlphas ' + alphas)
-    MCModule.SendCommand('setQ ' + str(prop.Q))
+    Q = prop.Q
+    MCModule.SendCommand('setQ ' + str(Q))
 
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 300
+    numParticles = 10
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
@@ -115,58 +148,30 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
-    start = time.clock()
-    MCModule.SendCommand('runSimulation')
-    end = time.clock()
-    print "Python Simulation Time: ", end - start
-    
-    
-    # start = time.clock()
-    # with env:
-    #     goalconfig = [0.449,-0.201,-0.151,0,0,-0.11,0]
-    #     ### YOUR CODE HERE ###
-    #     ###call your plugin to plan, draw, and execute a path from the current configuration of the left arm to the goalconfig
-    #     startstr = list2String(startconfig);
-    #     goalstr = list2String(goalconfig);
+    numSimulations = 5
 
-    #     startstr = 'start ' + startstr
-    #     goalstr = 'goal ' + goalstr
+    simTimes = []
+    proportions = []
+    for i in range(numSimulations):
+        start = time.clock()
+        collprop = MCModule.SendCommand('runSimulation')
+        end = time.clock()
+        collprop = float(collprop)
+        print 'Python got collision proportion: ', collprop
+        simTime = end - start
+        print "Python Simulation Time: ", simTime
+        simTimes.append(simTime)
+        proportions.append(collprop)
 
-    #     print 'startstr from Python:', startstr
-    #     print 'goalstr from Python:', goalstr
-        
-    #     #Tell C++ the start and goal nodes
-    #     MCModule.SendCommand('setNode ' + startstr)
-    #     MCModule.SendCommand('setNode ' + goalstr)
-    #     MCModule.SendCommand('printStartGoal')
+    print "SimTimes: \n", simTimes
+    print "Collision Probs: \n", proportions
 
-    #     goalbias = .05
-        
-    #     #Tell C++ to initialize an RRTConnect with goal bias
-    #     MCModule.SendCommand('initRRT rrt ' + str(goalbias))
-        
-    #     #Tell C++ to start planning with the RRT
-    #     result = MCModule.SendCommand('runRRT')
-    #     print "Python got path from C++: ",result
-    #     import pdb
-    #     pdb.set_trace()
-    #     finalpath = convertPathString2Path(result)
+    #Averages
+    simTA = np.average(simTimes)
+    CPA = np.average(proportions)
 
-    #     handles = []
-    #     #Now draw red squares
-    #     drawPath(finalpath,handles,robot,env,'red')
-        
-    # end = time.clock()
-    # print "Planning Time: ", end - start
-
-    # #Now execute trajectory
-    # traj = ConvertPathToTrajectory(robot, finalpath)
-    # # Execute the trajectory on the robot.
-    # if traj != None:
-    #     robot.GetController().SetPath(traj)
-        
-    #     ### END OF YOUR CODE ###
-    # waitrobot(robot)
+    #Output stats and configuration to text file
+    writeReport(numSimulations,envfile,alphas,Q,prop.numlandmarks,prop.landmarks,numParticles,prop.initialStateCovariance,trajectory,odometry,simTimes,proportions,simTA,CPA);
 
     raw_input("Press enter to exit...")
 

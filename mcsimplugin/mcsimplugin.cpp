@@ -42,7 +42,11 @@ public:
 
     //Run MC simulation
     bool runSimulation(std::ostream& sout, std::istream& sinput){
-        sim.runSimulation();
+        double collprop = sim.runSimulation();
+        std::cout << "collprop in C++: " << collprop << std::endl;
+        //Send to output
+        sout << collprop;
+        return true;
     }
 
     bool setTrajectory(std::ostream& sout, std::istream& sinput){
