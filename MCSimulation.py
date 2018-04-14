@@ -112,7 +112,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 10
+    numParticles = 5000
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
-    numSimulations = 5
+    numSimulations = 3
 
     simTimes = []
     proportions = []
