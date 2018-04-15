@@ -1,0 +1,6 @@
+Simulation: 0
+simTime: 2389.346264
+collProp: 0.8825
+Simulation: 1
+simTime: 2353.959338
+collProp: 0.9293

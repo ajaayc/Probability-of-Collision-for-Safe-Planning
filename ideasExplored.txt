@@ -1,0 +1,4 @@
+Quasi Monte Carlo Sampling (Sigma points)
+Smarter Monte Carlo Sampling
+Truncation via Unscented Transform. Let the nonlinear function be a collision checker that makes particle crash into obstacle
+Gaussian Mixture model approach (sampling is expensive though)
