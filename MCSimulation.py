@@ -16,7 +16,7 @@ if not __openravepy_build_doc__:
 def writeReport(numSimulations,envfile,alphas,Q,numlandmarks,landmarks,numparticles,initialcovariance,trajectory,odometry,simulationTimes,collisionProportions,simTimeAverage,collisionPropAverage):
     print "Writing Report\n"
     ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
     #print st
     fname = 'simReport_' + st +  '.txt'
     
