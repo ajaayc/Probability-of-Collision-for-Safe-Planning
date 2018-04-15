@@ -149,7 +149,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
-    numSimulations = 12
+    numSimulations = 2
 
     simTimes = []
     proportions = []
