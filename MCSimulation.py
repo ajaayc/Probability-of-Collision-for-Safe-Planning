@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
     #Use this file to store times and proportions if simulation is stopped in the middle
     ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
     #print st
     fname = 'checkpoint_' + st +  '.txt'
 
