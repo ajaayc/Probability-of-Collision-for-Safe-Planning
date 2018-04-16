@@ -2,3 +2,10 @@ Quasi Monte Carlo Sampling (Sigma points)
 Smarter Monte Carlo Sampling
 Truncation via Unscented Transform. Let the nonlinear function be a collision checker that makes particle crash into obstacle
 Gaussian Mixture model approach (sampling is expensive though)
+Dynamic programming to speed up collision checks
+Form constraints in workspace by finding robot radius
+
+
+
+Things to think about:
+Do we want an average or worst case probability of collision?

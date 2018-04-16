@@ -217,8 +217,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         Debug( "Setting ActiveDOFValues" << endl);
         robotptr->SetActiveDOFValues(dcurrConfig);
         Debug( endl << "Finished setting ActiveDOFValues" << endl);
-            
-        if(robotptr->CheckSelfCollision() || envptr->CheckCollision(robotptr)){
+
+        //Robot will never collide with itself. This is a huge bottleneck!
+        if(/*robotptr->CheckSelfCollision() || */envptr->CheckCollision(robotptr)){
             collisionExists = true;
         }
         m.unlock();

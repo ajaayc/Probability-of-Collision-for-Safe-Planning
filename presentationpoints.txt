@@ -1,0 +1,16 @@
+want to quantify probability of collision
+Astar not equal to safest path
+Using a single Gaussian may not represent the path well enough, especially in convex regions
+Don't know obstacle constraints in work space. Our planning algorithms generally rely on a collision checker
+
+pqprave collision distance to obstacles
+Don't check self collisions
+
+
+Distance to obstacle check is slow!
+
+Pros and cons of my approach:
+pro: more accurate than analytical uses collision checker
+
+Con: sampling is slow
+EKF. Linearization
