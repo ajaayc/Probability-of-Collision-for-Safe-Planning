@@ -81,8 +81,8 @@ if __name__ == "__main__":
     #env.Load('playbox.kinbody.xml')
     time.sleep(0.1)
 
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     
     # 1) get the 1st robot that is inside the loaded scene
     # 2) assign it to the variable named 'robot'
@@ -126,6 +126,8 @@ if __name__ == "__main__":
 
     prop = gp.Gauss_Prop(env,robot,room)
     prop.drawBeacons()
+    #import pdb
+    #pdb.set_trace()
 
     planner = astar.A_Star_Planner_8_euclidean(goalconfig,distanceWeight,angleWeight,distanceDisc,angleDisc,env,robot,room)    
 
@@ -186,7 +188,10 @@ if __name__ == "__main__":
     #### END OF YOUR CODE ###
     end = time.clock()
     print "Time: ", end - start
- 
+
+    #import pdb
+    #pdb.set_trace()
+    
     ulist = prop.getPathOdometry(path)
 
     #Save path and odometry to file
