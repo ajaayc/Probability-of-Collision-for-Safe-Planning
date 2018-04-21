@@ -91,6 +91,7 @@ class MCSimulator{
 
     //Gaussian mixture model
     int numGaussians;
+    int numGMMSamples;
     GM_Model gmm;
     
     //Covariance and mean of state
@@ -171,6 +172,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << this->numGaussians << std::endl;
     }
 
+    void setNumGMMSamples(int num){
+        this->numGMMSamples = num;
+        std::cout << "C++ got numGMMSamples: " << std::endl;
+        std::cout << this->numGMMSamples << std::endl;
+    }
+
     void setPathLength(int length){
         this->pathlength = length;
     }
@@ -210,14 +217,18 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
     //Takes in a 3 x N arma matrix of points in C-Space and returns
     //1 x N arma matrix with 0s and 1s representing which points collided
-    
-    void checkMatrixCollisions(arma::Mat<double>& configs,arma::Mat<short>& collisionMat){
+    //Also returns counts of colliding and uncolliding points
+    void checkMatrixCollisions(arma::Mat<double>& configs,arma::Mat<short>& collisionMat, int& numColliding, int& numNonColliding){
+        numColliding = 0;
+        numNonColliding = 0;
+            
         //Initialize
         collisionMat = zeros<arma::Mat<short>>(1,configs.n_cols);
         //Checks each config for a collision
         for(unsigned i = 0; i < configs.n_cols; ++i){
             arma::Mat<double> config = configs.col(i);
             collisionMat(0,i) = (checkCollision(config) ? 1 : 0);
+            (collisionMat(0,i) ? ++numColliding : ++numNonColliding);
         }
     }
     
@@ -321,12 +332,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     }
 
     double runGMMEstimation(){
-        initGMM();
+        std::cout << "C++ Entered runGMMEstimation" << std::endl;
+        double collprop = GMM_GaussProp();
+        return collprop;
     }
     
     // Run the MC simulation to get the probability of collision
     double runSimulation(){
-        std::cout << "C++ Entered runSimulation" << std::endl;        
+        std::cout << "C++ Entered runSimulation" << std::endl;
         double collprop = EKF_GaussProp();
         return collprop;
     }
@@ -522,6 +535,14 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //------------------------------------------------------------
     //Stuff below this is for the actual paper
     //------------------------------------------------------------
+
+    double GMM_GaussProp(){
+        //Initialize Gaussian mixture model
+        initGMM();
+        return 0.2434;
+    }
+
+
     //trajectory is list of states for the motion plan
     //controlinputs is list of odometry commands to transition between states
     //len(controls) = len(trajectory) - 1

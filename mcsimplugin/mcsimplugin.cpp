@@ -23,7 +23,7 @@ public:
         RegisterCommand("setLandmarks",boost::bind(&MCModule::setLandmarks,this,_1,_2),
                         "This is to initialize landmark locations");
         RegisterCommand("setNumParticles",boost::bind(&MCModule::setNumParticles,this,_1,_2),
-                        "This is to initialize number of landmark locations");
+                        "This is to initialize number of particles for MC simulation");
 
         RegisterCommand("setInitialCovariance",boost::bind(&MCModule::setInitialCovariance,this,_1,_2),
                         "This is to initialize first state covariance uncertainty");
@@ -40,7 +40,8 @@ public:
                         "This is to set number of Gaussians in mixture");
         RegisterCommand("runGMMEstimation",boost::bind(&MCModule::runGMMEstimation,this,_1,_2),
                         "Use sampling-based GMM algorithm to estimate probability of collision");
-
+        RegisterCommand("setNumGMMSamples",boost::bind(&MCModule::setNumGMMSamples,this,_1,_2),
+                        "This is to set number of samples for GMM collision estimation");
     }
     virtual ~MCModule() {}
 
@@ -52,18 +53,28 @@ public:
         return true;
     }
 
+    bool setNumGMMSamples(std::ostream& sout, std::istream& sinput){
+        int num;
+        sinput >> num;
+        sim.setNumGMMSamples(num);
+        return true;
+    }
+
     //Estimates probability of collision using GMM's
     //Requires number of Gaussians and initial covariance and trajectory
     //are known
     bool runGMMEstimation(std::ostream& sout, std::istream& sinput){
-        sim.runGMMEstimation();
+        double collprop = sim.runGMMEstimation();
+        std::cout << "GMM collprop in C++: " << collprop << std::endl;
+        //Send to output
+        sout << collprop;
         return true;
     }
 
     //Run MC simulation
     bool runSimulation(std::ostream& sout, std::istream& sinput){
         double collprop = sim.runSimulation();
-        std::cout << "collprop in C++: " << collprop << std::endl;
+        std::cout << "Monte Carlo collprop in C++: " << collprop << std::endl;
         //Send to output
         sout << collprop;
         return true;

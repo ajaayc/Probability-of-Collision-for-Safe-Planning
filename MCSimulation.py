@@ -153,9 +153,11 @@ if __name__ == "__main__":
     #--------------------
     #GMM Stuff
     numGaussians = 2
+    numGMMSamples = numParticles
     MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
+    MCModule.SendCommand('setNumGMMSamples ' + str(numGMMSamples))
     MCModule.SendCommand('runGMMEstimation')
-    print "python sent numGaussians"
+    print "python sent GMM Information"
     #--------------------
 
     import pdb
