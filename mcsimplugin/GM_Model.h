@@ -46,9 +46,31 @@ public:
         this->updateWeights(weightsn);
     }
 
-    //Sample from GM_Model
-    void sampleVal(){
-        int chosen_gaussian = this->weighted_dist(generator);
+    //Sample N points from GM_Model
+    //Returns a vector of size numGaussians (points). Each vector component
+    //is a 3 x Num arma matrix, where Num is the number of points
+    //generate from that Gaussian component
+    void sampleNPoints(int N,std::vector<arma::Mat<double> >& points){
+        std::vector<int> counts(this->numGaussians,0);
+
+        //Get total number of points to generate from each distribution
+        for(unsigned i = 0; i < N; ++i){
+            int chosen = this->weighted_dist(generator);
+            ++counts[chosen];
+        }
+
+        //Populate points
+        points.resize(this->numGaussians);
+        for(unsigned i = 0; i < counts.size(); ++i){
+            //Generate points from the distribution, with mean and covariance
+            arma::Mat<double>& curr = points[i];
+
+            //mvnrnd(X,M,C,N);
+            //mvnrnd(X,M,C,N);
+            mvnrnd(curr,means[i],covariances[i],counts[i]);
+        }
+        
+
         return;
     }
 

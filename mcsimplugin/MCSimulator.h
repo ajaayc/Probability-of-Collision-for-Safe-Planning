@@ -208,6 +208,20 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::cout << "C++ got Q: " << this->Q << std::endl;
     }
 
+    //Takes in a 3 x N arma matrix of points in C-Space and returns
+    //1 x N arma matrix with 0s and 1s representing which points collided
+    
+    void checkMatrixCollisions(arma::Mat<double>& configs,arma::Mat<short>& collisionMat){
+        //Initialize
+        collisionMat = zeros<arma::Mat<short>>(1,configs.n_cols);
+        //Checks each config for a collision
+        for(unsigned i = 0; i < configs.n_cols; ++i){
+            arma::Mat<double> config = configs.col(i);
+            collisionMat(0,i) = (checkCollision(config) ? 1 : 0);
+        }
+    }
+    
+
     //Overloaded. Takes in 3 x 1 arma matrix
     bool checkCollision(arma::Mat<double>& mconfig){
         std::vector<double> configx;
