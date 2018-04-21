@@ -149,7 +149,19 @@ if __name__ == "__main__":
     MCModule.SendCommand('setTrajectory ' + strtraj)
     MCModule.SendCommand('setOdometry ' + strodometry)
 
-    numSimulations = 20
+
+    #--------------------
+    #GMM Stuff
+    numGaussians = 2
+    MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
+    MCModule.SendCommand('runGMMEstimation')
+    print "python sent numGaussians"
+    #--------------------
+
+    import pdb
+    pdb.set_trace()
+    
+    numSimulations = 5
 
     simTimes = []
     proportions = []

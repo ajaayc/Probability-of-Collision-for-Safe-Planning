@@ -1,0 +1,3 @@
+Simulation: 0
+simTime: 130.667354
+collProp: 0.9521

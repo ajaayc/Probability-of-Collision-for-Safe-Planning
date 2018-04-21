@@ -5,6 +5,7 @@
 #include <armadillo>
 #include <openrave/plugin.h>
 #include <cassert>
+#include "GM_Model.h"
 
 #define USEDEBUG3
 
@@ -86,6 +87,11 @@ class MCSimulator{
     //1 x pathlength matrix representing number of times each particle
     //collided following the MC simulation conclusion
     arma::Mat<unsigned int> particlecollisions;
+
+
+    //Gaussian mixture model
+    int numGaussians;
+    GM_Model gmm;
     
     //Covariance and mean of state
     arma::Mat<double> cov;
@@ -157,6 +163,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         this->numParticles = num;
         std::cout << "C++ got numparticles: " << std::endl;
         std::cout << this->numParticles << std::endl;
+    }
+
+    void setNumGaussians(int num){
+        this->numGaussians = num;
+        std::cout << "C++ got numGaussians: " << std::endl;
+        std::cout << this->numGaussians << std::endl;
     }
 
     void setPathLength(int length){
@@ -287,6 +299,15 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
                 ++particlecollisions(0,i);
             }
         }
+    }
+
+    //initGMM. Requires we know initial mean, covariance, and number of Gaussians
+    void initGMM(){
+        this->gmm.initModel(this->numGaussians,initialmu,initialcovariance);
+    }
+
+    double runGMMEstimation(){
+        initGMM();
     }
     
     // Run the MC simulation to get the probability of collision

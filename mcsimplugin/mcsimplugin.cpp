@@ -36,9 +36,29 @@ public:
                         "This is to initialize the odometry");
         RegisterCommand("runSimulation",boost::bind(&MCModule::runSimulation,this,_1,_2),
                         "This is to run a MC simulation");
+        RegisterCommand("setNumGaussians",boost::bind(&MCModule::setNumGaussians,this,_1,_2),
+                        "This is to set number of Gaussians in mixture");
+        RegisterCommand("runGMMEstimation",boost::bind(&MCModule::runGMMEstimation,this,_1,_2),
+                        "Use sampling-based GMM algorithm to estimate probability of collision");
 
     }
     virtual ~MCModule() {}
+
+    //Set Number of Gaussians in mixture
+    bool setNumGaussians(std::ostream& sout, std::istream& sinput){
+        int num;
+        sinput >> num;
+        sim.setNumGaussians(num);
+        return true;
+    }
+
+    //Estimates probability of collision using GMM's
+    //Requires number of Gaussians and initial covariance and trajectory
+    //are known
+    bool runGMMEstimation(std::ostream& sout, std::istream& sinput){
+        sim.runGMMEstimation();
+        return true;
+    }
 
     //Run MC simulation
     bool runSimulation(std::ostream& sout, std::istream& sinput){
