@@ -64,6 +64,20 @@ def tuckarms(env,robot):
     waitrobot(robot)
 
 if __name__ == "__main__":
+    usage = 'Usage: ' + sys.argv[0] + ' \"MC\" or \"GMM\"'
+    if len(sys.argv) != 2:
+        #Incorrect format
+        print "Incorrect number of arguments"
+        print usage
+        sys.exit()
+
+    if not(sys.argv[1] =='MC' or sys.argv[1] == 'GMM'):
+        print "Unrecognized option"
+        print usage
+        sys.exit()
+
+    simoption = sys.argv[1]
+
     env = Environment()
     env.SetViewer('qtcoin')
     collisionChecker = RaveCreateCollisionChecker(env,'ode')
@@ -152,56 +166,63 @@ if __name__ == "__main__":
 
     #--------------------
     #GMM Stuff
-    numGaussians = 2
-    numGMMSamples = numParticles
-    MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
-    MCModule.SendCommand('setNumGMMSamples ' + str(numGMMSamples))
-    MCModule.SendCommand('runGMMEstimation')
-    print "python sent GMM Information"
-    #--------------------
+    if simoption == "GMM":
+        numGaussians = 2
+        numGMMSamples = numParticles
+        MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
+        MCModule.SendCommand('setNumGMMSamples ' + str(numGMMSamples))
 
-    import pdb
-    pdb.set_trace()
-    
-    numSimulations = 5
-
-    simTimes = []
-    proportions = []
-
-    #Use this file to store times and proportions if simulation is stopped in the middle
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
-    #print st
-    fname = 'checkpoint_' + st +  '.txt'
-
-    f2 = open(fname,'w')
-    
-    for i in range(numSimulations):
         start = time.clock()
-        collprop = MCModule.SendCommand('runSimulation')
+        collprop = MCModule.SendCommand('runGMMEstimation')
         end = time.clock()
         collprop = float(collprop)
         print 'Python got collision proportion: ', collprop
         simTime = end - start
-        print "Python Simulation Time: ", simTime
-        simTimes.append(simTime)
-        f2.write('Simulation: ' + str(i) + '\n')
-        f2.write('simTime: ' + str(simTime) + '\n')
-        proportions.append(collprop)
-        f2.write('collProp: ' + str(collprop) + '\n')
-        f2.flush()
-        os.fsync(f2.fileno())
-    f2.close()
-    
-    print "SimTimes: \n", simTimes
-    print "Collision Probs: \n", proportions
+        print "Python GMM Time: ", simTime
 
-    #Averages
-    simTA = np.average(simTimes)
-    CPA = np.average(proportions)
+    #--------------------
+    #Monte Carlo Simulation Stuff
+    elif simoption == "MC":
 
-    #Output stats and configuration to text file
-    writeReport(numSimulations,envfile,alphas,Q,prop.numlandmarks,prop.landmarks,numParticles,prop.initialStateCovariance,trajectory,odometry,simTimes,proportions,simTA,CPA);
+        numSimulations = 5
+
+        simTimes = []
+        proportions = []
+
+        #Use this file to store times and proportions if simulation is stopped in the middle
+        ts = time.time()
+        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
+        #print st
+        fname = 'checkpoint_' + st +  '.txt'
+
+        f2 = open(fname,'w')
+
+        for i in range(numSimulations):
+            start = time.clock()
+            collprop = MCModule.SendCommand('runSimulation')
+            end = time.clock()
+            collprop = float(collprop)
+            print 'Python got collision proportion: ', collprop
+            simTime = end - start
+            print "Python Simulation Time: ", simTime
+            simTimes.append(simTime)
+            f2.write('Simulation: ' + str(i) + '\n')
+            f2.write('simTime: ' + str(simTime) + '\n')
+            proportions.append(collprop)
+            f2.write('collProp: ' + str(collprop) + '\n')
+            f2.flush()
+            os.fsync(f2.fileno())
+            f2.close()
+
+        print "SimTimes: \n", simTimes
+        print "Collision Probs: \n", proportions
+
+        #Averages
+        simTA = np.average(simTimes)
+        CPA = np.average(proportions)
+
+        #Output stats and configuration to text file
+        writeReport(numSimulations,envfile,alphas,Q,prop.numlandmarks,prop.landmarks,numParticles,prop.initialStateCovariance,trajectory,odometry,simTimes,proportions,simTA,CPA);
 
     raw_input("Press enter to exit...")
 
