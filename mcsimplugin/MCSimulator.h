@@ -5,6 +5,7 @@
 #include <armadillo>
 #include <openrave/plugin.h>
 #include <cassert>
+#include <string>
 #include "GM_Model.h"
 
 #define USEDEBUG3
@@ -340,7 +341,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     // Run the MC simulation to get the probability of collision
     double runSimulation(){
         std::cout << "C++ Entered runSimulation" << std::endl;
-        double collprop = EKF_GaussProp();
+        double collprop = EKF_GaussProp("MC");
         return collprop;
     }
 
@@ -537,9 +538,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //------------------------------------------------------------
 
     double GMM_GaussProp(){
+        return EKF_GaussProp("GMM");
+        /*
         //Initialize Gaussian mixture model
         initGMM();
         return 0.2434;
+        */
     }
 
 
@@ -548,23 +552,28 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //len(controls) = len(trajectory) - 1
 
     //Returns proportion of particles that collided
-    double EKF_GaussProp(){
+    double EKF_GaussProp(std::string choice){
         std::cout << "C++ Entered Gaussprop" << std::endl;
         arma::Mat<double>& trajectoryi = this->trajectory;
         arma::Mat<double>& controlinputs = this->odometry;
-        
+
+
         //Initialize mean and covariance
         this->mu = this->initialmu;
         this->cov = this->initialcovariance;
 
-        //--------------------------------------------------------
-        //Initialize particles
-        initParticles();
-        Debug("C++ finished init particles" << std::endl;);
-        //Check collisions
-        checkParticleCollisions();
-        //--------------------------------------------------------
-        
+        if(choice == "MC"){
+            //--------------------------------------------------------
+            //Initialize particles
+            initParticles();
+            Debug("C++ finished init particles" << std::endl;);
+            //Check collisions
+            checkParticleCollisions();
+            //--------------------------------------------------------
+        }
+        else if(choice == "GMM"){
+            initGMM();
+        }
 
         //Initialize realpath
         arma::Mat<double> realpath = zeros<arma::Mat<double>>(3,this->pathlength);
@@ -616,13 +625,35 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
             Debug("applied control " << appliedcontrol << std::endl;);
 
-            //------------------------------------------------------------
-            //EKF Predict. Predict where we'll go based on applied control
+            //MC Exclusive Variables.
             arma::Mat<double> predMu;
             arma::Mat<double> predSigma;
-            this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
-            Debug("Finished EKFpredict" << std::endl;);
-            //------------------------------------------------------------
+
+            //GMM Exclusive variables. 
+            //Each mean is a 3 x 1
+            std::vector<arma::Mat<double>> predMeans;
+            //Each covariance is a 3 x 3
+            std::vector<arma::Mat<double>> predCovs;
+            predMeans.resize(this->numGaussians);
+            predCovs.resize(this->numGaussians);
+
+
+            if(choice == "MC"){
+                //------------------------------------------------------------
+                //EKF Predict. Predict where we'll go based on applied control
+                this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+                Debug("Finished EKFpredict" << std::endl;);
+                //------------------------------------------------------------
+            }
+            else if(choice == "GMM"){
+                //Run EKF predict on each Gaussian in the mixture
+                for(unsigned i = 0; i < numGaussians; ++i){
+                    //Modifies predMu and predSigma
+                    //this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+                    this->EKFpredict(gmm.means[i],gmm.covariances[i],appliedcontrol,M,Q,predMeans[i],predCovs[i]);
+                    Debug("Finished EKFpredict" << std::endl;);
+                }
+            }
 
             //Now move (with noise)
             //Add noise to odometry to go to another state

@@ -10,12 +10,14 @@ using namespace arma;
 
 //Represents a Gaussian Mixture
 class GM_Model{
+public:
     int numGaussians;
     //Each mean is a 3 x 1
     std::vector<arma::Mat<double>> means;
     //Each covariance is a 3 x 3
     std::vector<arma::Mat<double>> covariances;
 
+private:
     //Random generator
     std::default_random_engine generator;
     //Weights of each item in GMM. Same as weighted_dist.probabilities
