@@ -127,7 +127,7 @@ if __name__ == "__main__":
     MCModule.SendCommand('setNumLandmarks ' + str(prop.numlandmarks))
     MCModule.SendCommand('setLandmarks ' + list2String(list(prop.landmarks[0,:])) + list2String(list(prop.landmarks[1,:])))
 
-    numParticles = 10000
+    numParticles = 100
     MCModule.SendCommand('setNumParticles ' + str(numParticles))
     
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
             f2.write('collProp: ' + str(collprop) + '\n')
             f2.flush()
             os.fsync(f2.fileno())
-            f2.close()
+        f2.close()
 
         print "SimTimes: \n", simTimes
         print "Collision Probs: \n", proportions

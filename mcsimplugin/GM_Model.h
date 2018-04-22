@@ -49,9 +49,9 @@ public:
     }
 
     //Sample N points from GM_Model
-    //Returns a vector of size numGaussians (points). Each vector component
-    //is a 3 x Num arma matrix, where Num is the number of points
-    //generate from that Gaussian component
+    //Returns a vector of size numGaussians (modifies points). Each vector component
+    //is a 3 x Num arma matrix, where Num is the number of points generated
+    //from that Gaussian component. N is total number of points to sample
     void sampleNPoints(int N,std::vector<arma::Mat<double> >& points){
         std::vector<int> counts(this->numGaussians,0);
 

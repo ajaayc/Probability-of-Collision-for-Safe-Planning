@@ -72,6 +72,15 @@ void arma2Vector(const arma::Mat<double>& mconfig, std::vector<double>& config){
     config[2] = (mconfig(2,0));
 }
 
+//arma matrix with 1 row to vector
+void armaRowVec2Vector(const arma::Mat<double>& mconfig, std::vector<double>& inp){
+    inp.resize(mconfig.n_cols);
+
+    for(unsigned i = 0; i < mconfig.n_cols; ++i){
+        inp[i] = mconfig(0,i);
+    }
+}
+
 class MCSimulator{
     //Squared odometry noise values
     arma::Mat<double> alphas;
@@ -218,7 +227,8 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
     //Takes in a 3 x N arma matrix of points in C-Space and returns
     //1 x N arma matrix with 0s and 1s representing which points collided
-    //Also returns counts of colliding and uncolliding points
+    //Also returns counts of colliding and uncolliding points.
+    //1 = collided, 0 = not collided
     void checkMatrixCollisions(arma::Mat<double>& configs,arma::Mat<short>& collisionMat, int& numColliding, int& numNonColliding){
         numColliding = 0;
         numNonColliding = 0;
@@ -549,7 +559,56 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //Truncates GMM using Ajaay's algorithm. Returns total proportion
     //of particles sampled which were in collision with obstacles
     double truncateGMM(int numSamples){
-        //Sample
+        //Sample from GMM
+        std::vector<arma::Mat<double> > points;
+        gmm.sampleNPoints(this->numGMMSamples,points);
+
+        //Store for each gaussian the proportion of points that collided and didn't collide. Top row is colliding, bottom row is noncolliding
+        arma::Mat<double> collisionCounts = zeros<arma::Mat<double>>(2,this->numGaussians);
+        
+        //Loop through points to get the samples from each
+        for(unsigned i = 0; i < points.size(); ++i){
+            arma::Mat<double>& currSet = points[i];
+            arma::Mat<short> collisionMat;
+            int numColliding, numNonColliding;
+            
+            checkMatrixCollisions(currSet,collisionMat, numColliding, numNonColliding);
+            //Compute mean and covariance of points that didn't collide
+            uvec noncollindices = find(collisionMat == 0);
+            arma::Mat<double> noncollpoints = currSet.cols(noncollindices);
+
+            //Get mean and covariance of noncollpoints. 1 == rowwise mean
+            arma::Mat<double> truncmean = arma::mean(noncollpoints, 1);
+            arma::Mat<double> trunccov = arma::cov(noncollpoints.t());
+
+            //Update mean and covariance
+            gmm.means[i] = truncmean;
+            gmm.covariances[i] = trunccov;
+
+            collisionCounts(0,i) = numColliding;
+            collisionCounts(1,i) = numNonColliding;
+        }
+
+        //Get proportion of total particles that collided, and update weights
+        //arma::Mat<double> collideCounts = collisionCounts.row(0);
+        //Normalize row vectors with 1 norm
+        arma::Mat<double> weights = arma::normalise(collisionCounts,1,1);
+        
+        //Only care about second row, the number of non colliding particles
+        arma::Mat<double> propsmat = weights.row(1);
+        
+        //Weigths to vector
+        std::vector<double> weightsvec;
+        armaRowVec2Vector(propsmat,weightsvec);
+        
+        //update GMM weights
+        gmm.updateWeights(weightsvec);
+
+        //Get proportion of colliding particles overall of all particles (row 0)
+        int totalcollided = sum(static_cast<vec>(collisionCounts.row(0)));
+
+        double prop = totalcollided / (1.0 * this->numGMMSamples);
+        return prop;
     }
 
     //trajectory is list of states for the motion plan
@@ -736,15 +795,23 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             //
             //------------------------------------------------------------
         }
+
+        double collprop;
+        if(choice == "MC"){
+            //return realpath;
+            //Output collision matrix
+            std::cout << "Finished MCSimulation." << std::endl;
+            std::cout << "Particles:" << std::endl << this->mcparticles << std::endl;
+            std::cout << "Collision:" << std::endl << this->particlecollisions << std::endl;
+            //Estimate of probability of collision
+            collprop = getCollisionProportion();
+            std::cout << "Proportion Collided:" << std::endl << collprop << std::endl;
+        }
+        else /*if(choice == "GMM")*/{
+            //Multiply all the individual probabilities of collision
+            collprop = arma::prod(static_cast<vec>(probabilities));
+        }
         
-        //return realpath;
-        //Output collision matrix
-        std::cout << "Finished MCSimulation." << std::endl;
-        std::cout << "Particles:" << std::endl << this->mcparticles << std::endl;
-        std::cout << "Collision:" << std::endl << this->particlecollisions << std::endl;
-        //Estimate of probability of collision
-        double collprop = getCollisionProportion();
-        std::cout << "Proportion Collided:" << std::endl << collprop << std::endl;
         return collprop;
     }
 
