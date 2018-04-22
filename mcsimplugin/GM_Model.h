@@ -76,7 +76,6 @@ public:
         return;
     }
 
-
     //Update distribution with new weights
     void updateWeights(std::vector<double>& weights){
         this->weights = weights;

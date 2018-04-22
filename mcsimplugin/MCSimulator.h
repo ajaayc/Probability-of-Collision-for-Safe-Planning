@@ -546,6 +546,11 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         */
     }
 
+    //Truncates GMM using Ajaay's algorithm. Returns total proportion
+    //of particles sampled which were in collision with obstacles
+    double truncateGMM(int numSamples){
+        //Sample
+    }
 
     //trajectory is list of states for the motion plan
     //controlinputs is list of odometry commands to transition between states
@@ -562,6 +567,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         this->mu = this->initialmu;
         this->cov = this->initialcovariance;
 
+        //Initialize truncation probabilities for each state of plan
+        arma::Mat<double> probabilities = zeros<arma::Mat<double>>(1,this->pathlength);
+        
         if(choice == "MC"){
             //--------------------------------------------------------
             //Initialize particles
@@ -573,6 +581,9 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         }
         else if(choice == "GMM"){
             initGMM();
+            double partialProp = truncateGMM(this->numGMMSamples);
+            //do GMM truncation for first state
+            probabilities(0,1) = partialProp;
         }
 
         //Initialize realpath
@@ -638,22 +649,11 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             predCovs.resize(this->numGaussians);
 
 
-            if(choice == "MC"){
-                //------------------------------------------------------------
-                //EKF Predict. Predict where we'll go based on applied control
-                this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
-                Debug("Finished EKFpredict" << std::endl;);
-                //------------------------------------------------------------
-            }
-            else if(choice == "GMM"){
-                //Run EKF predict on each Gaussian in the mixture
-                for(unsigned i = 0; i < numGaussians; ++i){
-                    //Modifies predMu and predSigma
-                    //this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
-                    this->EKFpredict(gmm.means[i],gmm.covariances[i],appliedcontrol,M,Q,predMeans[i],predCovs[i]);
-                    Debug("Finished EKFpredict" << std::endl;);
-                }
-            }
+            //------------------------------------------------------------
+            //EKF Predict. Predict where we'll go based on applied control
+            this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+            Debug("Finished EKFpredict" << std::endl;);
+            //------------------------------------------------------------
 
             //Now move (with noise)
             //Add noise to odometry to go to another state
@@ -661,10 +661,24 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             arma::Mat<double> noisymotion;
             arma::Mat<double> nextstate = this->sampleOdometry(realstate,appliedcontrol,noisymotion);
 
-            //-----------Move all particles for the MCSimulation-----------
-            this->moveParticles(noisymotion);
-            this->checkParticleCollisions();
-            //-----------Move all particles for the MCSimulation-----------
+
+            //The GMM is the analog of the particles
+            if(choice == "MC"){
+                //-----------Move all particles for the MCSimulation-----------
+                this->moveParticles(noisymotion);
+                this->checkParticleCollisions();
+                //-----------Move all particles for the MCSimulation-----------
+            }
+            else if(choice == "GMM"){
+                //Run EKF predict on each Gaussian in the mixture to move Gaussians
+                for(unsigned i = 0; i < numGaussians; ++i){
+                    //Modifies predMu and predSigma
+                    //this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
+                    this->EKFpredict(gmm.means[i],gmm.covariances[i],appliedcontrol,M,Q,predMeans[i],predCovs[i]);
+                    Debug("Finished EKFpredict on GMM" << std::endl;);
+                }
+            }
+
             
             Debug("C++ got nextstate "<< nextstate << std::endl;);
             realstate = nextstate;
@@ -692,6 +706,24 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             Debug("C++ finished EKFupdate" << std::endl;);
             this->mu = newmu;
             this->cov = newsigma;
+
+            //Also Run EKF Update on the mixture if we used GMM
+            if(choice == "GMM"){
+                for(unsigned i = 0; i < numGaussians; ++i){
+                    //Modifies predMu and predSigma
+                    this->EKFupdate(predMeans[i],predCovs[i],realobservations,Q,newmu,newsigma);
+
+                    //Update mean and covariance of each Gaussian with newmu,newsigma
+                    gmm.means[i] = newmu;
+                    gmm.covariances[i] = newsigma;
+                    Debug("Finished EKFpredict on GMM" << std::endl;);
+                }
+
+                //Now truncate Gaussians in the mixture and update weights.
+                //Also get proportion of colliding particles.
+                double partialProp = truncateGMM(numGMMSamples);
+                probabilities(0,i+1) = partialProp;
+            }
 
             //print 'nominalstate: ', trajectoryi[i+1]
             //print 'estimatestate: ', mu
