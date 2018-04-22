@@ -9,6 +9,7 @@
 #include "GM_Model.h"
 
 #define USEDEBUG3
+#define USEDEBUG4
 
 #ifdef USEDEBUG
 #define Debug(x) std::cout << x
@@ -26,6 +27,14 @@
 #define Debug3(x) std::cout << x
 #else
 #define Debug3(x) 
+#endif
+
+//Debug 4 is for debugging the new GMM feature
+
+#ifdef USEDEBUG4
+#define Debug4(x) std::cout << x
+#else
+#define Debug4(x) 
 #endif
 
 using namespace OpenRAVE;
@@ -559,9 +568,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
     //Truncates GMM using Ajaay's algorithm. Returns total proportion
     //of particles sampled which were in collision with obstacles
     double truncateGMM(int numSamples){
+        GMMDebug("Entered truncateGMM\n";);
         //Sample from GMM
         std::vector<arma::Mat<double> > points;
+        GMMDebug("Sampling Points from GMM\n";);
         gmm.sampleNPoints(this->numGMMSamples,points);
+        return 0.11111;
 
         //Store for each gaussian the proportion of points that collided and didn't collide. Top row is colliding, bottom row is noncolliding
         arma::Mat<double> collisionCounts = zeros<arma::Mat<double>>(2,this->numGaussians);
@@ -640,9 +652,12 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         }
         else if(choice == "GMM"){
             initGMM();
+            //return 0.11111;
             double partialProp = truncateGMM(this->numGMMSamples);
+            GMMDebug("First Partial Proportion: " << partialProp << "\n";);
+            return 0.11111;
             //do GMM truncation for first state
-            probabilities(0,1) = partialProp;
+            probabilities(0,0) = partialProp;
         }
 
         //Initialize realpath
@@ -730,10 +745,10 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             }
             else if(choice == "GMM"){
                 //Run EKF predict on each Gaussian in the mixture to move Gaussians
-                for(unsigned i = 0; i < numGaussians; ++i){
+                for(unsigned currG = 0; currG < numGaussians; ++currG){
                     //Modifies predMu and predSigma
                     //this->EKFpredict(mu,cov,appliedcontrol,M,Q,predMu,predSigma);
-                    this->EKFpredict(gmm.means[i],gmm.covariances[i],appliedcontrol,M,Q,predMeans[i],predCovs[i]);
+                    this->EKFpredict(gmm.means[currG],gmm.covariances[currG],appliedcontrol,M,Q,predMeans[currG],predCovs[currG]);
                     Debug("Finished EKFpredict on GMM" << std::endl;);
                 }
             }
@@ -768,19 +783,19 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
 
             //Also Run EKF Update on the mixture if we used GMM
             if(choice == "GMM"){
-                for(unsigned i = 0; i < numGaussians; ++i){
+                for(unsigned currG = 0; currG < numGaussians; ++currG){
                     //Modifies predMu and predSigma
-                    this->EKFupdate(predMeans[i],predCovs[i],realobservations,Q,newmu,newsigma);
+                    this->EKFupdate(predMeans[currG],predCovs[currG],realobservations,Q,newmu,newsigma);
 
                     //Update mean and covariance of each Gaussian with newmu,newsigma
-                    gmm.means[i] = newmu;
-                    gmm.covariances[i] = newsigma;
+                    gmm.means[currG] = newmu;
+                    gmm.covariances[currG] = newsigma;
                     Debug("Finished EKFpredict on GMM" << std::endl;);
                 }
 
                 //Now truncate Gaussians in the mixture and update weights.
                 //Also get proportion of colliding particles.
-                double partialProp = truncateGMM(numGMMSamples);
+                double partialProp = truncateGMM(this->numGMMSamples);
                 probabilities(0,i+1) = partialProp;
             }
 

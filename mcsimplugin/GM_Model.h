@@ -8,6 +8,28 @@
 
 using namespace arma;
 
+#define USEGMMDebug
+
+#ifdef USEGMMDebug
+#define GMMDebug(x) std::cout << x
+#else
+#define GMMDebug(x) 
+#endif
+
+
+void printVectorGM(std::vector<double>& inp){
+    for(auto it=inp.begin(); it != inp.end(); ++it){
+        GMMDebug(*it << " ";);
+    }
+    GMMDebug(std::endl;);
+}
+void printVectorGM(std::vector<int>& inp){
+    for(auto it=inp.begin(); it != inp.end(); ++it){
+        GMMDebug(*it << " ";);
+    }
+    GMMDebug(std::endl;);
+}
+
 //Represents a Gaussian Mixture
 class GM_Model{
 public:
@@ -37,13 +59,19 @@ public:
         this->means.resize(this->numGaussians);
         this->covariances.resize(this->numGaussians);
         
+        GMMDebug("Initialized GMM" << std::endl;);
+        GMMDebug("NumGaussians: " << this->numGaussians << std::endl;);
+
         //Initialize GMM
         for(unsigned i = 0; i < this->numGaussians; ++i){
             means[i] = initialMean;
             covariances[i] = initialCovariance;
+            GMMDebug("Mean [" << i << "]:\n " << means[i] << std::endl;);
+            GMMDebug("Covariance [" << i << "]:\n " << covariances[i] << std::endl;);
         }
 
         //Initialize with equal weights
+        GMMDebug("Initializing Weights\n");
         std::vector<double> weightsn(this->numGaussians, 1.0/this->numGaussians);
         this->updateWeights(weightsn);
     }
@@ -55,14 +83,21 @@ public:
     void sampleNPoints(int N,std::vector<arma::Mat<double> >& points){
         std::vector<int> counts(this->numGaussians,0);
 
+        GMMDebug("Sampling N points from GMM\n";);
+        GMMDebug("Number of GMM components: " << this->numGaussians << "\n";);
         //Get total number of points to generate from each distribution
         for(unsigned i = 0; i < N; ++i){
             int chosen = this->weighted_dist(generator);
+            //GMMDebug(chosen << " ";);
             ++counts[chosen];
         }
 
+        GMMDebug("Counts Vector\n";);
+        printVectorGM(counts);
+
         //Populate points
         points.resize(this->numGaussians);
+        GMMDebug("Generating Points:\n";);
         for(unsigned i = 0; i < counts.size(); ++i){
             //Generate points from the distribution, with mean and covariance
             arma::Mat<double>& curr = points[i];
@@ -70,6 +105,10 @@ public:
             //mvnrnd(X,M,C,N);
             //mvnrnd(X,M,C,N);
             mvnrnd(curr,means[i],covariances[i],counts[i]);
+            GMMDebug("Points " << i << " Dimension:\n";);
+            //GMMDebug(points[i] << std::endl;);
+            GMMDebug(points[i].n_rows << "x" << points[i].n_cols << std::endl;);
+            GMMDebug("Finished printing dimension\n";);
         }
         
 
@@ -80,6 +119,8 @@ public:
     void updateWeights(std::vector<double>& weights){
         this->weights = weights;
         this->weighted_dist = std::discrete_distribution<int>(weights.begin(),weights.end());
+        GMMDebug("Updated GMM Weights:\n");
+        printVectorGM(this->weights);
     }
         
 };
