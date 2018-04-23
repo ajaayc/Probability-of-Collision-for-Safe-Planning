@@ -564,7 +564,7 @@ Figure \ref{patil_figure} portrays the approach recognized in \cite{IEEEhowto:pa
 
 The approach of Patil et al. is purely analytical. It truncates the KF estimate of the robot state by sequentially applying each obstacle constraint to truncate the Gaussian distribution of the state estimate using analytical techniques from existing literature. They assume that the truncation of a Gaussian distribution by the obstacle constraints subsequently yields another Gaussian distribution.
 
-The approach of Patil et al. makes two more important assumptions that are worth noting when they truncate the KF estimate with respect to obstacles:
+The approach of Patil et al. makes two more important assumptions that are important to note when they truncate the KF estimate with respect to obstacles:
 \begin{enumerate}
   \item The obstacles in the environment can be expressed as linear constraints on the robot's location in the workspace
   \item The free region containing the robot's configuration at time $t$ is convex
@@ -572,12 +572,36 @@ The approach of Patil et al. makes two more important assumptions that are worth
 
 We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to release these assumptions as we define our sampling-based GMM approach to estimate the probability of collision.
 
+\subsection{Method Overview and Justification}
+
+An important note to make is that the approach in \cite{IEEEhowto:patil} may be sufficient if we could express linear constraints in the configuration space $\mathcal{C}$ of a robot. Knowing the obstacle constraints in  $\mathcal{C}$ rather than as constraints on location in the robot's 3D-workspace could allow us to apply the approach of Patil et al. to truncate the distribution that represents a KF estimate of the robot's configuration. However, in general, computation of $\mathcal{C}_{OBS} \subset \mathcal{C}$, the space of all robot configurations that lead to collision with an obstacle, is computationally expensive in practice. It follows that learning configuration constraints in $\mathcal{C}$ rather than in the workspace may be very difficult in practice, as well. Furthermore, the constraints of $\mathcal{C}$ may also not be linear since $\mathcal{C}$ can have a complex topology.
+
+Knowing (or learning) constraints for a robot's set of feasible configurations in $\mathcal{C}$ does not seem computationally efficient; however, we assume that we have access to the collision checker $\phi$, which asserts whether an arbitrary $x_t \in \mathcal{C}_{OBS}$. Given the existence of a collision checker, we believe that a \underline{sampling-based approach} for truncation of Gaussian distributions is necessary for a decent attempt of a solution to estimating the probability of collision. Other approaches assume the existence of a distance-to-obstacle checker {\color{red}{cite here}}, which may allow us to quantify the maximum clearance from an obstacle for a robot configuration to not collide. These approaches utilize this clearance in their computation of the probability of collision.
+
+We observe that we need a method to truncate the robot state distribution computed from the KF estimate with respect to obstacles, where the proportion of the distribution that is truncated would represented the probability of collision for that waypoint of the motion plan--contingent on the the prior states being collision-free.
+
+A straightforward approach using the collision checker involves sampling random configurations from the KF estimate of the robot's state and taking note of:
+\begin{enumerate}
+\item the proportion of sampled configurations in collision
+\item the set of configurations that are not in collision
+\end{enumerate}
+
+%TODO: Something seems wrong here
+Given 1, we would have an estimate, $p_{ct}$, for the probability of collision for that waypoint of the motion plan, and $1 - p_{ct}$ would represent the conditional probability of no collision, given that the previous states of the motion plan were collision-free. Given 2, we would be able to fit a distribution to the set of configurations that are not in collision, effectively truncating the original robot state distribution.
+
+The left image of Figure \ref{ajaay_justification} portrays this approach where we attempt to fit a single Gaussian distribution to the set of robot configurations that are not in collision. We find that in extreme cases like this, a single Gaussian distribution may not best represent the distribution of non-colliding particles. This can be especially common if the feasible region in $\mathcal{C}$ containing $x_t$ is non-convex. Our approach recognizes this and proposes to truncate the distribution and represent the distribution of the subsequent set of non-colliding points as a mixture of Gaussians, or a GMM. We believe that the use of a GMM would more accurately capture the distribution of non-colliding configurations. The idea of this approach is demonstrated in the right image of Figure \ref{ajaay_justification}.
+
+We also note that the approach in \cite{IEEEhowto:patil} degenerates when the free space containing the robot configuration is non-convex, as they use a greedy method to convexify the free space and obtain and overestimate of the probability of collision. This stems from their assumption that a single Gaussian distribution best represents the truncated distribution. We construct our GMM approach with the intention that it can handle these occurrences, representing the truncated distribution, as in the case of Figure \ref{ajaay_justification}, more accurately.
+
+
 \begin{figure}[!t]
 \centering
 \includegraphics[width=3.5in]{combined_pic.png}
 \caption{Our GMM approach attempts to handle situations where the distribution obtained by the truncation of the robot's configuration distribution by obstacles may not necessarily be represented sufficiently by a single Gaussian. [Left] When the EKF estimate of the robot's configuration (orange ellipse) is truncated, a single Gaussian distribution (green ellipse) may not best represent the subsequent collision-free distribution. [Right] A mixture of two Gaussians may represent the truncated collision-free distribution better than a single Gaussians.}
 \label{ajaay_justification}
 \end{figure}
+
+\subsection{Algorithm}
 
 \begin{figure*}[!t]
 \centering
@@ -595,9 +619,6 @@ We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to 
 \caption{Sampling-Based GMM Collision Estimation Algorithm applied to Mixture of 2 Gaussians. (a) Initialize mixture components with same initial mean $x_0^*$ and covariance $\Sigma_0$, as well as equal weights (Means shown as different here to highlight distinction). Gaussians are represented by blue ellipses. (b) Propagate Gaussians in mixture to next state of motion plan via EKF prediction step. Updated Gaussians are represented by red ellipses. (c) Update Gaussians via EKF correction step based on measurements (orange ellipses). Then, sample $N_p$ configurations from GMM based on weights. Check which configurations are in collision. Red dots represent colliding configurations and blue dots represent collision-free configurations. (d) Update mean and covariance of each Gaussian analytically based on the set of collision-free configurations contained in it. Update each mixture component's weight to be the proportion of the total non-colliding configurations that it contains.}
 \label{algorithm_steps}
 \end{figure*}
-
-
-\subsection{Algorithm}
 
 %\begin{figure*}[!t]
 %\centering
@@ -630,7 +651,6 @@ We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to 
     \ENDIF
   \end{algorithmic}
 \end{algorithm}
-Our approach
 
 
 \section{Results}
