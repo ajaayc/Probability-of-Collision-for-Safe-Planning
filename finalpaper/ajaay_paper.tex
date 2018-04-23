@@ -603,6 +603,8 @@ We also note that the approach in \cite{IEEEhowto:patil} degenerates when the fr
 
 \subsection{Algorithm}
 
+Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability estimation algorithm. The algorithm takes as input the nominal motion plan computed by a motion planner, $[x_0^*,u_0^*,...,x_N^*,u_N^*]$, and the initial configuration estimate $\mu_0$ and its covariance $\Sigma_0$. The algorithm also receives the number of Gaussians to use $N_G$, and the number of samples to take at each time step, $N_p$. 
+
 \begin{figure*}[!t]
 \centering
 \subfloat (a) {\includegraphics[width=1.55in]{step1.png}%
@@ -634,12 +636,68 @@ We also note that the approach in \cite{IEEEhowto:patil} degenerates when the fr
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
 \begin{algorithm}
   \caption{Sampling-Based GMM Collision Estimation}
   \begin{algorithmic}[1]
+    \REQUIRE{$[x_0^*,u_0^*,...,x_N^*,u_N^*], \mu_0,\Sigma_0, N_G, N_p$}
+    \ENSURE{$p_c$}
+    \STATE{$\mu^* \gets \mu_0$}
+    \STATE{$\Sigma^* \gets \Sigma_0$}
+    \STATE{$p_f \gets 1$}
+    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*]$ $\gets$ INIT\_GMM($N_G, \mu_0,\Sigma_0$)}
+    \STATE{$[\lambda_1,...,\lambda_{N_G}] \gets [\frac{1}{N_G},...,\frac{1}{N_G}]$}
+    \FOR{$i = 0$ to $i = N-1$}
+    \STATE{$\bar{u}_i \gets L_{t+1}(\mu^* - x_i^*)$}
+    \STATE{$u_i \gets u_i^* + \bar{u}_i$}
+    \STATE{$\bar{\mu}^*, \bar{\Sigma}^*$ $\gets$ EKF\_PREDICT($\mu^*,\Sigma^*,u_i$)}
+    \STATE{$z_i$ $\gets$ SENSOR\_READ()}
+    \STATE{${\mu}^*, {\Sigma}^*$ $\gets$ EKF\_CORRECT($\bar{\mu}^*,\bar{\Sigma}^*,z_i$)}
+    
+    \FOR{$j = 1$ to $j = N_G$}
+    \STATE{$\bar{\mu}_i^*, \bar{\Sigma_i}^*$ $\gets$ EKF\_PREDICT($\mu_i^*,\Sigma_i^*,u_i$)}
+    \STATE{${\mu}_i^*, {\Sigma}_i^*$ $\gets$ EKF\_CORRECT($\bar{\mu}_i^*,\bar{\Sigma}_i^*,z_i$)}
+    
+    \ENDFOR
+    \STATE{$[\chi_1,...,\chi_{N_G}]$ $\gets$ SAMPLE\_GMM($N_p$)}
+    \STATE{$C_c \gets 0$}
+    \STATE{$[\bar{\chi_1},...\bar{\chi_{N_G}}] \gets [\emptyset,...,\emptyset]$}
+    \FOR{$j = 1$ to $j = N_G$}
+    \FOR{$q$ in $\chi_j$}
+    \IF{CHECK\_COLLISION(q) == TRUE}
+    $C_c \gets C_c + 1$
+    \ELSE
+    $\bar{\chi}_j \gets \{\bar{\chi}_j, q\}$
+    \ENDIF
+    %Check collision
+    \ENDFOR
+    %\STATE \texttt{<do stuff>}
+    \ENDFOR
+
+    \FOR{$j = 1$ to $j = N_G$}
+    \STATE{$\mu_j^* \gets$ MEAN($\bar{\chi}_j$)}
+    \STATE{$\Sigma_j^* \gets$ COVARIANCE($\bar{\chi}_j$)}
+    \ENDFOR
+
+    %Compute proportion of colliding articles
+    \STATE{$p_i \gets \frac{C_c}{N_p}$}
+    \STATE{$p_i \gets 1-p_i$}
+    \STATE{$p_f \gets p_f * p_i$}
+    \ENDFOR
+    \STATE{$p_c \gets 1-p_f$}\\
+  \end{algorithmic}
+\label{gmm_estim}  
+\end{algorithm}
+
+
+\begin{algorithm}
+  \caption{INIT\_GMM}
+  \begin{algorithmic}[1]
     \REQUIRE{$[x_0^*,u_0^*,...,x_N^*,u_N^*]$}
     \ENSURE{$p_c$}
-    \STATE{INIT\_GMM}
+    \STATE{INIT\_GMM()}
     \IF{some condition is true}
       \STATE do some processing
     \ELSIF{some other condition is true}
@@ -650,8 +708,8 @@ We also note that the approach in \cite{IEEEhowto:patil} degenerates when the fr
       \STATE do the default actions
     \ENDIF
   \end{algorithmic}
+\label{init_gmm}
 \end{algorithm}
-
 
 \section{Results}
 Hi
