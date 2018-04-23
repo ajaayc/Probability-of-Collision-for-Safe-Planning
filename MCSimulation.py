@@ -43,6 +43,40 @@ def writeReport(numSimulations,envfile,alphas,Q,numlandmarks,landmarks,numpartic
     f.close()
     
 
+def writeReportGMM(numSimulations,envfile,alphas,Q,numlandmarks,landmarks,numparticles,initialcovariance,trajectory,odometry,simulationTimes,collisionProportions,simTimeAverage,collisionPropAverage,numGaussians,numSamples):
+    print "Writing Report\n"
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
+    #print st
+    fname = 'GMMsimReport_' + st +  '.txt'#DIFFERENT
+    
+    f = open(fname,'w')
+    f.write('Environment: ' + str(envfile) + "\n")
+    f.write('Num Landmarks: ' + str(numlandmarks) + "\n")
+    f.write('Landmarks: \n' + str(landmarks) + "\n")
+
+    f.write('Alphas: \n' + str(alphas) + "\n")
+    f.write('Sensor Noise Variance: ' + str(Q) + "\n")
+    f.write('Initial Covariance: \n' + str(initialcovariance) + "\n")
+    f.write('---------------------------------\n')
+    f.write('NumSimulations: ' + str(numSimulations) + "\n")
+    #f.write('Num Particles: ' + str(numparticles) + "\n")
+
+    f.write('Num Samples: ' + str(numSamples) + "\n")#DIFFERENT
+    f.write('Num Gaussians: ' + str(numGaussians) + "\n")#DIFFERENT
+    
+    
+    f.write('Simulation Times: \n' + str(simulationTimes) + "\n")
+    f.write('Collision Proportions: \n' + str(collisionProportions) + "\n")
+    f.write('Average Sim Time: ' + str(simTimeAverage) + "\n")
+    f.write('Average Prob Collision: ' + str(collisionPropAverage) + "\n")
+    f.write('---------------------------------\n')
+    f.write('Trajectory: \n' + str(trajectory.transpose()) + "\n")
+    f.write('Odometry: \n' + str(odometry.transpose()) + "\n")
+
+    f.close()
+
+
 #For sending configuration to C++
 def list2String(mylist):
     result = ""
@@ -172,57 +206,66 @@ if __name__ == "__main__":
         MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
         MCModule.SendCommand('setNumGMMSamples ' + str(numGMMSamples))
 
+        #start = time.clock()
+        #collprop = MCModule.SendCommand('runGMMEstimation')
+        #end = time.clock()
+        #collprop = float(collprop)
+        #print 'Python got collision proportion: ', collprop
+        #simTime = end - start
+        #print "Python GMM Time: ", simTime
+
+    #--------------------
+    #Monte Carlo Simulation Stuff
+    #elif simoption == "MC":
+
+    numSimulations = 5
+
+    simTimes = []
+    proportions = []
+
+    #Use this file to store times and proportions if simulation is stopped in the middle
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
+    #print st
+
+    if simoption == 'MC':
+        fname = 'checkpoint_' + st +  '.txt'
+    elif simoption == 'GMM':
+        fname = 'GMMcheckpoint_' + st +  '.txt'
+        
+    f2 = open(fname,'w')
+
+    for i in range(numSimulations):
         start = time.clock()
-        collprop = MCModule.SendCommand('runGMMEstimation')
+        if simoption == "MC":
+            collprop = MCModule.SendCommand('runSimulation')
+        elif simoption == "GMM":
+            collprop = MCModule.SendCommand('runGMMEstimation')
         end = time.clock()
         collprop = float(collprop)
         print 'Python got collision proportion: ', collprop
         simTime = end - start
-        print "Python GMM Time: ", simTime
+        print "Python Simulation Time: ", simTime
+        simTimes.append(simTime)
+        f2.write('Simulation: ' + str(i) + '\n')
+        f2.write('simTime: ' + str(simTime) + '\n')
+        proportions.append(collprop)
+        f2.write('collProp: ' + str(collprop) + '\n')
+        f2.flush()
+        os.fsync(f2.fileno())
+    f2.close()
 
-    #--------------------
-    #Monte Carlo Simulation Stuff
-    elif simoption == "MC":
+    print "SimTimes: \n", simTimes
+    print "Collision Probs: \n", proportions
 
-        numSimulations = 100
+    #Averages
+    simTA = np.average(simTimes)
+    CPA = np.average(proportions)
 
-        simTimes = []
-        proportions = []
-
-        #Use this file to store times and proportions if simulation is stopped in the middle
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H_%M_%S')
-        #print st
-        fname = 'checkpoint_' + st +  '.txt'
-
-        f2 = open(fname,'w')
-
-        for i in range(numSimulations):
-            start = time.clock()
-            collprop = MCModule.SendCommand('runSimulation')
-            end = time.clock()
-            collprop = float(collprop)
-            print 'Python got collision proportion: ', collprop
-            simTime = end - start
-            print "Python Simulation Time: ", simTime
-            simTimes.append(simTime)
-            f2.write('Simulation: ' + str(i) + '\n')
-            f2.write('simTime: ' + str(simTime) + '\n')
-            proportions.append(collprop)
-            f2.write('collProp: ' + str(collprop) + '\n')
-            f2.flush()
-            os.fsync(f2.fileno())
-        f2.close()
-
-        print "SimTimes: \n", simTimes
-        print "Collision Probs: \n", proportions
-
-        #Averages
-        simTA = np.average(simTimes)
-        CPA = np.average(proportions)
-
+    if simoption == "MC":
         #Output stats and configuration to text file
         writeReport(numSimulations,envfile,alphas,Q,prop.numlandmarks,prop.landmarks,numParticles,prop.initialStateCovariance,trajectory,odometry,simTimes,proportions,simTA,CPA);
-
+    elif simoption == "GMM":
+        writeReportGMM(numSimulations,envfile,alphas,Q,prop.numlandmarks,prop.landmarks,numParticles,prop.initialStateCovariance,trajectory,odometry,simTimes,proportions,simTA,CPA,numGaussians,numGMMSamples);
     raw_input("Press enter to exit...")
 
