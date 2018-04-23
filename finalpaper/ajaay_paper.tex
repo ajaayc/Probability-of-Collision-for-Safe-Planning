@@ -288,6 +288,9 @@
 
 
 
+%TODO: IS this necessary?
+%\usepackage{subfig}
+
 
 %\ifCLASSOPTIONcaptionsoff
 %  \usepackage[nomarkers]{endfloat}
@@ -580,6 +583,13 @@ Knowing (or learning) constraints for a robot's set of feasible configurations i
 
 We observe that we need a method to truncate the robot state distribution computed from the KF estimate with respect to obstacles, where the proportion of the distribution that is truncated would represented the probability of collision for that waypoint of the motion plan--contingent on the the prior states being collision-free.
 
+\begin{figure}[!t]
+\centering
+\includegraphics[width=3.5in]{combined_pic.png}
+\caption{Our GMM approach attempts to handle situations where the distribution obtained by the truncation of the robot's configuration distribution by obstacles may not necessarily be represented sufficiently by a single Gaussian. [Left] When the EKF estimate of the robot's configuration (orange ellipse) is truncated, a single Gaussian distribution (green ellipse) may not best represent the subsequent collision-free distribution. [Right] A mixture of two Gaussians may represent the truncated collision-free distribution better than a single Gaussians.}
+\label{ajaay_justification}
+\end{figure}
+
 A straightforward approach using the collision checker involves sampling random configurations from the KF estimate of the robot's state and taking note of:
 \begin{enumerate}
 \item the proportion of sampled configurations in collision
@@ -593,17 +603,6 @@ The left image of Figure \ref{ajaay_justification} portrays this approach where 
 
 We also note that the approach in \cite{IEEEhowto:patil} degenerates when the free space containing the robot configuration is non-convex, as they use a greedy method to convexify the free space and obtain and overestimate of the probability of collision. This stems from their assumption that a single Gaussian distribution best represents the truncated distribution. We construct our GMM approach with the intention that it can handle these occurrences, representing the truncated distribution, as in the case of Figure \ref{ajaay_justification}, more accurately.
 
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=3.5in]{combined_pic.png}
-\caption{Our GMM approach attempts to handle situations where the distribution obtained by the truncation of the robot's configuration distribution by obstacles may not necessarily be represented sufficiently by a single Gaussian. [Left] When the EKF estimate of the robot's configuration (orange ellipse) is truncated, a single Gaussian distribution (green ellipse) may not best represent the subsequent collision-free distribution. [Right] A mixture of two Gaussians may represent the truncated collision-free distribution better than a single Gaussians.}
-\label{ajaay_justification}
-\end{figure}
-
-\subsection{Algorithm}
-
-Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability estimation algorithm. The algorithm takes as input the nominal motion plan computed by a motion planner, $[x_0^*,u_0^*,...,x_N^*,u_N^*]$, and the initial configuration estimate $\mu_0$ and its covariance $\Sigma_0$. The algorithm also receives the number of Gaussians to use $N_G$, and the number of samples to take at each time step, $N_p$. 
 
 \begin{figure*}[!t]
 \centering
@@ -622,6 +621,24 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
 \label{algorithm_steps}
 \end{figure*}
 
+\subsection{Algorithm}
+
+Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability estimation algorithm. The algorithm takes as input the nominal motion plan computed by a motion planner, $[x_0^*,u_0^*,...,x_N^*,u_N^*]$, and the initial configuration estimate $\mu_0$ and its covariance $\Sigma_0$. The algorithm also receives the number of Gaussians to use $N_G$, and the number of samples $N_p$ to take at each time step.
+
+The algorithm begins by initializing the EKF estimate mean and covariance based. Generally, $\mu_0 = x_0^*$. Line \ref{samp_alg:pf} initializes a running proportion for the probability that no configurations in the motion plan are configuration free. Line \ref{samp_alg:initgmm} initializes the GMM; the INIT\_GMM process simply assigns each mixture's $\mu^*$ and $\Sigma^*$ to be the same as $\mu_0$ and $\Sigma_0$ respectively. Furthermore, Line \ref{samp_alg:weights} initializes the weight, $\lambda_i$, of each mixture component to $\frac{1}{N_G}$.
+
+Lines \ref{samp_alg:mainforbegin}-\ref{samp_alg:mainforend} consist of a main loop that propagates the EKF estimate of the robot's state, and the GMM representation of the collision-free conditional distribution, through the motion plan.
+
+In Lines \ref{samp_alg:control}-\ref{samp_alg:control2}, the linear feedback control gain $L_{t+1}$ is used to adjust the nominal control input $u_i^*$ to attempt to fix the deviation between the KF estimate of the robot's current state $\mu^*$ and the nominal state $x_t^*$ in the motion plan \cite{IEEEhowto:stengel}. 
+
+The functions EKF\_PREDICT and EKF\_CORRECT represent the prediction and correction steps of the Extended Kalman Filter respectively \cite{IEEEhowto:thrun}. Lines \ref{samp_alg:ekfp_1}-\ref{samp_alg:ekfp_2} apply the prediction and update to the KF estimate parameters $\mu^*,\Sigma^*$ based on the adjusted control input and a set of sensor measurements $z$ with known data association between measurements and landmarks. Furthermore, Lines \ref{samp_alg:ekfp_3}-\ref{samp_alg:ekfp_4} apply the EKF\_PREDICT and EKF\_UPDATE steps on each component of the GMM.
+
+Line \ref{samp_alg:trunc} applies the TRUNCATE\_GMM algorithm, which uses our sampling-based approach to truncate each GMM component. The algorithm takes as input the current means and covariances of the GMM and returns the updated means and covariances following truncation.
+
+The TRUNCATE\_GMM algorithm also returns $p_i$, the proportion of samples drawn from the GMM mixture that did not collide with obstacles, which ultimately estimates the conditional probability that the current waypoint of the motion plan will be collision-free given that the previous waypoints are collision-free. This value is then used in \ref{samp_alg:accumulate} to update $p_f$, the running product representing the probability that all waypoints in the motion plan so far are collision-free.
+
+Following the end of the main loop through all of the motion plan states (Line \ref{samp_alg:mainforend}), $p_f$ stores an estimate of the the probability that all configurations in the motion plan will be collision-free. Line \ref{samp_alg:inverse} computes $p_c \gets 1-p_f$, which represents the probability that there existed a configuration in the motion plan that experienced a collision.
+
 %\begin{figure*}[!t]
 %\centering
 %\subfloat[Case I]{\includegraphics[width=0.5in]{one_gaussian.png}%
@@ -639,6 +656,12 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 
+
+
+
+\section{Results}
+Hi
+
 \begin{algorithm}
   \caption{Sampling-Based GMM Collision Estimation}
   \begin{algorithmic}[1]
@@ -646,30 +669,29 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
     \ENSURE{$p_c$}
     \STATE{$\mu^* \gets \mu_0$}
     \STATE{$\Sigma^* \gets \Sigma_0$}
-    \STATE{$p_f \gets 1$}
-    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*]$ $\gets$ INIT\_GMM($N_G, \mu_0,\Sigma_0$)}
-    \STATE{$[\lambda_1,...,\lambda_{N_G}] \gets [\frac{1}{N_G},...,\frac{1}{N_G}]$}
-    \FOR{$i = 0$ to $i = N-1$}
-    \STATE{$\bar{u}_i \gets L_{t+1}(\mu^* - x_i^*)$}
-    \STATE{$u_i \gets u_i^* + \bar{u}_i$}
-    \STATE{$\bar{\mu}^*, \bar{\Sigma}^*$ $\gets$ EKF\_PREDICT($\mu^*,\Sigma^*,u_i$)}
+    \STATE{$p_f \gets 1$} \label{samp_alg:pf}
+    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*]$ $\gets$ INIT\_GMM($N_G, \mu_0,\Sigma_0$)} \label{samp_alg:initgmm}
+    \STATE{$[\lambda_1,...,\lambda_{N_G}] \gets [\frac{1}{N_G},...,\frac{1}{N_G}]$} \label{samp_alg:weights}
+    \FOR{$i = 0$ to $i = N-1$}\label{samp_alg:mainforbegin}
+    \STATE{$\bar{u}_i \gets L_{t+1}(\mu^* - x_i^*)$}\label{samp_alg:control}
+    \STATE{$u_i \gets u_i^* + \bar{u}_i$}\label{samp_alg:control2}
+    \STATE{$\bar{\mu}^*, \bar{\Sigma}^*$ $\gets$ EKF\_PREDICT($\mu^*,\Sigma^*,u_i$)}\label{samp_alg:ekfp_1}
     \STATE{$z_i$ $\gets$ SENSOR\_READ()}
-    \STATE{${\mu}^*, {\Sigma}^*$ $\gets$ EKF\_CORRECT($\bar{\mu}^*,\bar{\Sigma}^*,z_i$)}
+    \STATE{${\mu}^*, {\Sigma}^*$ $\gets$ EKF\_CORRECT($\bar{\mu}^*,\bar{\Sigma}^*,z_i$)}\label{samp_alg:ekfp_2}
     
-    \FOR{$j = 1$ to $j = N_G$}
+    \FOR{$j = 1$ to $j = N_G$} \label{samp_alg:ekfp_3}
     \STATE{$\bar{\mu}_i^*, \bar{\Sigma_i}^*$ $\gets$ EKF\_PREDICT($\mu_i^*,\Sigma_i^*,u_i$)}
     \STATE{${\mu}_i^*, {\Sigma}_i^*$ $\gets$ EKF\_CORRECT($\bar{\mu}_i^*,\bar{\Sigma}_i^*,z_i$)}
     
-    \ENDFOR
-    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],p_i$ $\gets$ TRUNCATE\_GMM()}
+    \ENDFOR \label{samp_alg:ekfp_4}
+    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],p_i$ $\gets$ TRUNCATE\_GMM()} \label{samp_alg:trunc}
     
-    \STATE{$p_f \gets p_f * p_i$}
-    \ENDFOR
-    \STATE{$p_c \gets 1-p_f$}\\
+    \STATE{$p_f \gets p_f * p_i$} \label{samp_alg:accumulate}
+    \ENDFOR \label{samp_alg:mainforend}
+    \STATE{$p_c \gets 1-p_f$}\label{samp_alg:inverse}
   \end{algorithmic}
 \label{gmm_estim}  
 \end{algorithm}
-
 
 \begin{algorithm}
   \caption{TRUNCATE\_GMM}
@@ -702,9 +724,6 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
   \end{algorithmic}
 \label{init_gmm}
 \end{algorithm}
-
-\section{Results}
-Hi
 
 \section{Discussion}
 
