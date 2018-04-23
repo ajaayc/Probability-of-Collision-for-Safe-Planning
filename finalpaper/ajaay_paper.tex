@@ -623,9 +623,9 @@ We also note that the approach in \cite{IEEEhowto:patil} degenerates when the fr
 
 \subsection{Algorithm}
 
-Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability estimation algorithm. The algorithm takes as input the nominal motion plan computed by a motion planner, $[x_0^*,u_0^*,...,x_N^*,u_N^*]$, and the initial configuration estimate $\mu_0$ and its covariance $\Sigma_0$. The algorithm also receives the number of Gaussians to use $N_G$, and the number of samples $N_p$ to take at each time step.
+Algorithm \ref{gmm_estim_alg} portrays our sampling-based GMM collision probability estimation algorithm. The algorithm takes as input the nominal motion plan computed by a motion planner, $[x_0^*,u_0^*,...,x_N^*,u_N^*]$, and the initial configuration estimate $\mu_0$ and its covariance $\Sigma_0$. The algorithm also receives the number of Gaussians to use $N_G$, and the number of samples $N_p$ to take at each time step. The algorithm is also depicted pictorally in Figure \ref{algorithm_steps}.
 
-The algorithm begins by initializing the EKF estimate mean and covariance based. Generally, $\mu_0 = x_0^*$. Line \ref{samp_alg:pf} initializes a running proportion for the probability that no configurations in the motion plan are configuration free. Line \ref{samp_alg:initgmm} initializes the GMM; the INIT\_GMM process simply assigns each mixture's $\mu^*$ and $\Sigma^*$ to be the same as $\mu_0$ and $\Sigma_0$ respectively. Furthermore, Line \ref{samp_alg:weights} initializes the weight, $\lambda_i$, of each mixture component to $\frac{1}{N_G}$.
+The algorithm begins by initializing the EKF estimate mean and covariance. Generally, $\mu_0 = x_0^*$. Line \ref{samp_alg:pf} initializes a running proportion $p_f$ for the probability that all configurations in the motion plan are configuration free. Line \ref{samp_alg:initgmm} initializes the GMM; the INIT\_GMM procedure simply assigns each mixture's $\mu^*$ and $\Sigma^*$ to be the same as $\mu_0$ and $\Sigma_0$ respectively. Furthermore, Line \ref{samp_alg:weights} initializes the weight, $\lambda_i$, of each mixture component to $\frac{1}{N_G}$.
 
 Lines \ref{samp_alg:mainforbegin}-\ref{samp_alg:mainforend} consist of a main loop that propagates the EKF estimate of the robot's state, and the GMM representation of the collision-free conditional distribution, through the motion plan.
 
@@ -635,9 +635,29 @@ The functions EKF\_PREDICT and EKF\_CORRECT represent the prediction and correct
 
 Line \ref{samp_alg:trunc} applies the TRUNCATE\_GMM algorithm, which uses our sampling-based approach to truncate each GMM component. The algorithm takes as input the current means and covariances of the GMM and returns the updated means and covariances following truncation.
 
-The TRUNCATE\_GMM algorithm also returns $p_i$, the proportion of samples drawn from the GMM mixture that did not collide with obstacles, which ultimately estimates the conditional probability that the current waypoint of the motion plan will be collision-free given that the previous waypoints are collision-free. This value is then used in \ref{samp_alg:accumulate} to update $p_f$, the running product representing the probability that all waypoints in the motion plan so far are collision-free.
+The TRUNCATE\_GMM algorithm also returns $p_i$, the proportion of samples drawn from the GMM mixture that did not collide with obstacles, which ultimately estimates the conditional probability that the current waypoint of the motion plan will be collision-free given that the previous waypoints are collision-free. This value is then used in Line \ref{samp_alg:accumulate} to update $p_f$, the running product representing the probability that all waypoints in the motion plan so far are collision-free.
 
-Following the end of the main loop through all of the motion plan states (Line \ref{samp_alg:mainforend}), $p_f$ stores an estimate of the the probability that all configurations in the motion plan will be collision-free. Line \ref{samp_alg:inverse} computes $p_c \gets 1-p_f$, which represents the probability that there existed a configuration in the motion plan that experienced a collision.
+Following the end of the main loop through all of the motion plan waypoints (Line \ref{samp_alg:mainforend}), $p_f$ stores an estimate of the the probability that all configurations in the motion plan will be collision-free. Line \ref{samp_alg:inverse} computes $p_c \gets 1-p_f$, which represents the probability that there existed a configuration in the motion plan that experienced a collision.
+
+We proceed to discuss the TRUNCATE\_GMM subprocedure, which is portrayed in Algorithm \ref{trunc_gmm}. Given the GMM represented by $[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*]$ and the number of samples $N_P$, the algorithm attempts to update the GMM representation of the robot's state distribution by discounting all colliding configurations from the distribution.
+
+On Line \ref{trunc_alg:sample}, $N_p$ configurations are sampled from the GMM using the weights $\lambda_1,...\lambda_{N_G}$. For the mixture component parameterized by $\m_i, \Sigma_i$, the set $\chi_i$ stores the configurations that were obtained from that component during the sampling.
+
+Line \ref{trunc_alg:collision_free} initializes a new set $\bar{\chi}_i$ for each mixture component, which ultimately will store the configurations associated with that component's sample set, $\chi_i$, which are not in collision. In other words:
+$$\forall i, 1 \leq i \leq N_{G}, ( \bar{\chi}_i  = \{q \in \chi_i | q \in \mathcal{C}_F \})$$
+
+The loop during lines \ref{trunc_alg:mainloop_begin}-\ref{trunc_alg:mainloop_end} computes each $\bar{\chi}_j$, which is updated on Line \ref{trunc_alg:chiupdate} whenever a new configuration from $\chi_j$ is found to not be in collision.
+
+The TRUNCATE\_GMM procedure also maintains several counts. Line \ref{trunc_alg:nocoll_counts} initializes the counts, $F_i$, for the number of non-colliding particles in each mixture sample. In other words:
+$$\forall i, 1 \leq i \leq N_{G}, ( F_i = |\bar{\chi}_i|)$$
+
+Furthermore, $C_c$, which is initialized on Line \ref{trunc_alg:total_collcount}, represents the count of all configurations across all of the samples $[\chi_1,...,\chi_{N_G}]$ that were in collision. More formally:
+$$C_c = N_{P} - \sum_{i=1}^{N_G}F_i$$
+
+Lines \ref{trunc_alg:mean_covbegin}-\ref{trunc_alg:mean_covend} update the GMM components' means and covariances to be the sample mean and covariance of the sets $\bar{\chi_j}$ of non-colliding points in each mixture sample. Line \ref{trunc_alg:weightupdate} also updates the weight of each mixture component to be the proportion of non-colliding configurations in the mixture sample across the sum of the counts of all non-colliding configurations from all the samples.
+
+For a pictoral representation of the overall algorithm, refer to Figure \ref{algorithm_steps}.
+
 
 %\begin{figure*}[!t]
 %\centering
@@ -690,7 +710,7 @@ Hi
     \ENDFOR \label{samp_alg:mainforend}
     \STATE{$p_c \gets 1-p_f$}\label{samp_alg:inverse}
   \end{algorithmic}
-\label{gmm_estim}  
+\label{gmm_estim_alg}  
 \end{algorithm}
 
 \begin{algorithm}
@@ -698,31 +718,34 @@ Hi
   \begin{algorithmic}[1]
     \REQUIRE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],N_P$}
     \ENSURE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],p_i$}
-    \STATE{$[\chi_1,...,\chi_{N_G}]$ $\gets$ SAMPLE\_GMM($N_p$)}
-    \STATE{$C_c \gets 0$}
-    \STATE{$[\bar{\chi_1},...\bar{\chi_{N_G}}] \gets [\emptyset,...,\emptyset]$}
-    \FOR{$j = 1$ to $j = N_G$}
+    \STATE{$[\chi_1,...,\chi_{N_G}]$ $\gets$ SAMPLE\_GMM($N_p$)} \label{trunc_alg:sample}
+    \STATE{$[\bar{\chi_1},...\bar{\chi_{N_G}}] \gets [\emptyset,...,\emptyset]$} \label{trunc_alg:collision_free}
+    \STATE{$[F_{1},...,F_{N_G}]\gets [0,...,0]$} \label{trunc_alg:nocoll_counts}
+    \STATE{$C_c \gets 0$} \label{trunc_alg:total_collcount}
+    \FOR{$j = 1$ to $j = N_G$} \label{trunc_alg:mainloop_begin}
     \FOR{$q$ in $\chi_j$}
-    \IF{CHECK\_COLLISION(q) == TRUE}
-    $C_c \gets C_c + 1$
+    \IF{CHECK\_COLLISION($q$) == TRUE}
+    \STATE{$C_c \gets C_c + 1$}
     \ELSE
-    $\bar{\chi}_j \gets \{\bar{\chi}_j, q\}$
+    \STATE{$\bar{\chi}_j \gets \{\bar{\chi}_j, q\}$} \label{trunc_alg:chiupdate}
+    \STATE{$F_{j} \gets F_{j} + 1$}
     \ENDIF
     %Check collision
     \ENDFOR
     %\STATE \texttt{<do stuff>}
-    \ENDFOR
+    \ENDFOR \label{trunc_alg:mainloop_end}
 
-    \FOR{$j = 1$ to $j = N_G$}
+    \FOR{$j = 1$ to $j = N_G$} \label{trunc_alg:mean_covbegin}
     \STATE{$\mu_j^* \gets$ MEAN($\bar{\chi}_j$)}
     \STATE{$\Sigma_j^* \gets$ COVARIANCE($\bar{\chi}_j$)}
-    \ENDFOR
+    \STATE{$\lambda_j \gets \frac{F_j}{\sum_{i=1}^{N_G}F_i}$} \label{trunc_alg:weightupdate}
+    \ENDFOR \label{trunc_alg:mean_covend}
 
     %Compute proportion of colliding articles
     \STATE{$p_i \gets \frac{C_c}{N_p}$}
     \STATE{$p_i \gets 1-p_i$}\\%
   \end{algorithmic}
-\label{init_gmm}
+\label{trunc_gmm}
 \end{algorithm}
 
 \section{Discussion}
