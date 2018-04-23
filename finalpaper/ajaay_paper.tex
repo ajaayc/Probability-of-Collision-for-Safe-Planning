@@ -676,12 +676,6 @@ For a pictoral representation of the overall algorithm, refer to Figure \ref{alg
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 
-
-
-
-\section{Results}
-Hi
-
 \begin{algorithm}
   \caption{Sampling-Based GMM Collision Estimation}
   \begin{algorithmic}[1]
@@ -747,6 +741,23 @@ Hi
   \end{algorithmic}
 \label{trunc_gmm}
 \end{algorithm}
+
+\subsection{Algorithm Analysis}
+We recognize that our algorithm may suffer computationally due to extensive time required to sample from $\mathcal{C}$ and check for collisions on each configuration with the environment for each waypoint of a motion plan. Furthermore, the random sampling-based nature and the noise in motion and sensor information may also yield a different estimated probability of collision $p_c$ during each time that the algorithm is executed.
+
+Our goal in applying this algorithm is to obtain a reasonable estimate of the true probability of collision within a certain error-bound. Executing hundreds of Monte-Carlo simulations would potentially yield the true probability of collision; however, pursuing that approach would be very computationally expensive in practice.
+
+Ideally, our sampling-based method would be able to execute in about the same amount of time as a single Monte-Carlo simulation while yielding the accuracy of averaging the probability of collision from running hundreds of Monte-Carlo simulations.
+
+Suppose that $N_p$ represents the number of samples (or the number of particles used in a Monte-Carlo simulation), $N$ represents the number of waypoints in our motion plan, and $N_m$ represents the number of Monte-Carlo simulations we might execute to compute the probability of collision. Our method would execute in $\mathcal{O}(NN_p))$ time. Executing the Monte-Carlo simulations, however, would require $\mathcal{O}(NN_pN_m)$ time. If our method is successful, it could be much more efficient than the Monte-Carlo simulation method while still retaining the same accuracy.
+
+%We believe that our method is reasonable because the propagation and truncation of a GMM representing the distribution of collision-free states could be more accurate than the propagation and truncation of a single Gaussian.
+
+%Furthermore, there is no formal proof that the algorithm would succeed in accurately estimating the probability of collision for a motion planning. 
+
+\section{Results}
+Hi
+
 
 \section{Discussion}
 
