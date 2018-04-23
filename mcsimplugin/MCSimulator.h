@@ -573,39 +573,51 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         std::vector<arma::Mat<double> > points;
         GMMDebug("Sampling Points from GMM\n";);
         gmm.sampleNPoints(this->numGMMSamples,points);
-        return 0.11111;
 
         //Store for each gaussian the proportion of points that collided and didn't collide. Top row is colliding, bottom row is noncolliding
         arma::Mat<double> collisionCounts = zeros<arma::Mat<double>>(2,this->numGaussians);
-        
-        //Loop through points to get the samples from each
+
+        GMMDebug("Truncate GMM, Begin looping through points\n";);
+        //Loop through points to get the samples from each Gaussian
         for(unsigned i = 0; i < points.size(); ++i){
             arma::Mat<double>& currSet = points[i];
             arma::Mat<short> collisionMat;
             int numColliding, numNonColliding;
-            
+            GMMDebug("Checking set " << i << std::endl);
             checkMatrixCollisions(currSet,collisionMat, numColliding, numNonColliding);
+            //GMMDebug("Collision matrix:\n" << collisionMat << "\n");
+
+
             //Compute mean and covariance of points that didn't collide
             uvec noncollindices = find(collisionMat == 0);
+            //GMMDebug("noncollidingindices:\n" << noncollindices << "\n");
             arma::Mat<double> noncollpoints = currSet.cols(noncollindices);
 
             //Get mean and covariance of noncollpoints. 1 == rowwise mean
             arma::Mat<double> truncmean = arma::mean(noncollpoints, 1);
             arma::Mat<double> trunccov = arma::cov(noncollpoints.t());
 
+            GMMDebug("Truncated Mean:\n" << truncmean;);
+            GMMDebug("Truncated Covariance:\n" << trunccov;);
+            
             //Update mean and covariance
             gmm.means[i] = truncmean;
             gmm.covariances[i] = trunccov;
 
+            GMMDebug("NumColliding: " << numColliding << "\n";);
+            GMMDebug("NumNonColliding: " << numNonColliding << "\n";);
+            
             collisionCounts(0,i) = numColliding;
             collisionCounts(1,i) = numNonColliding;
         }
 
+        GMMDebug("GMM Collision Counts:\n" << collisionCounts << "\n";);
         //Get proportion of total particles that collided, and update weights
         //arma::Mat<double> collideCounts = collisionCounts.row(0);
         //Normalize row vectors with 1 norm
         arma::Mat<double> weights = arma::normalise(collisionCounts,1,1);
-        
+        GMMDebug("Normalized:\n" << weights << "\n";);
+
         //Only care about second row, the number of non colliding particles
         arma::Mat<double> propsmat = weights.row(1);
         
@@ -616,10 +628,16 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
         //update GMM weights
         gmm.updateWeights(weightsvec);
 
+
         //Get proportion of colliding particles overall of all particles (row 0)
-        int totalcollided = sum(static_cast<vec>(collisionCounts.row(0)));
+        arma::Mat<double> totals = sum(collisionCounts,1);
+        GMMDebug("Total Counts:\n" << totals << "\n";);
+        double totalcollided = totals(0,0);
+        
+        GMMDebug("Total Collided: " << totalcollided << "\n";);
 
         double prop = totalcollided / (1.0 * this->numGMMSamples);
+        GMMDebug("Collision Proportion: " << prop << "\n";);
         return prop;
     }
 
@@ -655,7 +673,7 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             //return 0.11111;
             double partialProp = truncateGMM(this->numGMMSamples);
             GMMDebug("First Partial Proportion: " << partialProp << "\n";);
-            return 0.11111;
+
             //do GMM truncation for first state
             probabilities(0,0) = partialProp;
         }
@@ -823,8 +841,23 @@ MCSimulator(EnvironmentBasePtr envptr):m(envptr->GetMutex()){
             std::cout << "Proportion Collided:" << std::endl << collprop << std::endl;
         }
         else /*if(choice == "GMM")*/{
+            std::cout << "Finished GMM Estimation.\n";
+            std::cout << "Collision Probabilities:\n" << probabilities << "\n";
+
+            //Do 1 - probability of collision on each to get probability of free
+            arma::Mat<double> collFreeMat = 1 - probabilities;
+            std::cout << "Collision Free Probabilities:\n" << collFreeMat << "\n";            
+            //Then find probability that all of the states are free
+            arma::Mat<double> collpropmat = arma::prod(collFreeMat,1);
+            GMMDebug("Collpropmat:\n" << collpropmat;);
+            collprop = collpropmat(0,0);
+
+            //Then 1 - that probability to get our p of collision
+            collprop = 1 - collprop;
+            
             //Multiply all the individual probabilities of collision
-            collprop = arma::prod(static_cast<vec>(probabilities));
+ 
+            std::cout << "Probabilitiy of Collision:\n" << collprop << "\n";   
         }
         
         return collprop;

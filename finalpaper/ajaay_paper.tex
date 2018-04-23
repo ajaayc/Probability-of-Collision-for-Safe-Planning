@@ -57,7 +57,7 @@
 % \documentclass[journal]{../sty/IEEEtran}
 
 
-
+\usepackage{color}
 
 
 % Some very useful LaTeX packages include:
@@ -174,7 +174,8 @@
 
 % *** SPECIALIZED LIST PACKAGES ***
 %
-%\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{algorithmic}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
 % This package provides an algorithmic environment fo describing algorithms.
 % You can use the algorithmic environment in-text or within a figure
@@ -441,18 +442,13 @@
 % As a general rule, do not put math, special symbols or citations
 % in the abstract or keywords.
 \begin{abstract}
-  Active development of robotic caregivers for the elderly has raised a number of ethical concerns. We examine the current state of the art in robotic caregivers and continue with a discussion of associated concerns. We conclude with a review of ideas to consider as robotic caregiver research and development continues.
+  This is the abstract.
 \end{abstract}
 
 % Note that keywords are not normally used for peerreview papers.
 \begin{IEEEkeywords}
- robotic caregiver, elderly, healthcare.
+ collision probability, motion planning, safety, uncertainty.
 \end{IEEEkeywords}
-
-
-%Many purport that robotic caregivers might reduce the amount of human contact that the elderly have, yielding more comfort for human caregivers than the cared. Others argue that robotic caregivers can lead to objectification of the elderly, inciting a feeling of powerlessness among those who receive care. 
-
-
 
 % For peer review papers, you can put extra information on the cover
 % page as needed:
@@ -481,101 +477,111 @@
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{T}he use of robots in elderly care is becoming increasingly likely throughout the world, as the population of elderly people is beginning to overtake the number of potential caregivers. This phenomenon is becoming particularly evident in Japan, where low birth rates and long life expectancy seem to contribute to a rapidly aging population. In 2009, it was found that approximately 22\% of the Japanese population was over the age of 65 years old. This estimate is projected to increase to approximately 34\% by 2035 \cite{IEEEhowto:sharkey}. The Japanese government is responding to this situation by increasing funding for research into robotic caregivers as a means to manage the rising subpopulation of elderly individuals.
+\IEEEPARstart{T}he use of robots in elderly care is becoming increasingly likely throughout the world, as the population of elderly people is beginning to overtake the number of potential caregivers. 
 
-The United States and Europe are facing a similar problem. In particular, in the United States, 12.8\% of the population are over the age of 65, and this number is expected to rise to around 20\% by 2030 \cite{IEEEhowto:sharkey}. It may be likely that the United States could follow the Japanese lead into robot care.
+\section{Related Work}
 
-Development of robotic caregivers for the elderly raises several questions:
+\section{Estimating Probability of Collision}
+\subsection{Problem Statement}
+We consider a robot operating in an environment with obstacles.% Our goal is to quantify the safety of a motion plan prior to its execution by the robot's controller. We quantify the safety of a plan via the probability that the robot will experience a collision while executing the plan.
+The motion model of the robot is given as:
+$$x_{t+1} = g(x_{t-1}, u_{t-1}, m), m \sim \mathcal{N}(0,R_t)$$
+where $x_t \in \mathcal{C}$ is the configuration of the robot at time $t$, $u_t \in\mathbb{R}^{n_u}$ is the applied control input, and $m$ is a zero-mean Gaussian noise variable with variance $R_t$.
+
+During execution of the motion plan, the robot obtains measurements of surrounding landmarks. The sensor model of the robot is given as:
+$$z_t = h(x_t,l,n), n \sim \mathcal{N}(0,Q_t)$$
+where $z_t \in \mathbb{R}^{n_z}$ is the measurement obtained at time $t$, $l \in \mathbb{R}^{n_l}$ is the location of the landmark that is observed, and $n$ is a zero-mean Gaussian noise variable with variance $Q_t$.
+
+We assume the existence of a nominal plan computed by a motion planner. The nominal plan is defined by:
+$$[x_0^*,u_0^*,...,x_N^*,u_N^*]$$
+where $x_t^* = g(x_{t-1}^*,u_{t-1}^*,0)$ for $0 < t \leq N$ , where $N$ is the number of configurations in the motion plan.
+
+With the preliminary notation established, we can now express our problem statement. Our goal is to estimate the probability of collision $p_c$ for the nominal plan. More formally, this probability is represented as:
+$$p_c = p\left(\[ \bigvee\limits_{t=0}^N x_t^* \notin \mathcal{C}_F \]\right)$$
+where $\mathcal{C}_F \subset \mathcal{C}$ represents the space of non-colliding configurations.
+
+\subsection{Formulation and Assumptions}
+
+Much of existing literature on this subect assumes that we can represent obstacles in the environment as known constraints on the robot's feasible locations in the workspace. However, we do not make that assumption, and we assume that there instead exists a collision checker $\phi: \mathcal{C} \rightarrow \{\text{TRUE},\text{FALSE}\}$, which can determine if a configuration is in collision. If $x\notin \mathcal{C}_F$, $\phi(x) = \text{TRUE}$; otherwise $\phi(x) = \text{FALSE}$ \cite{IEEEhowto:lavalle}.
+
+The assumption of an available collision checker contrasts our formulation from other literatures, which tend to only consider point robots through the formulation of known robot location constraints based on obstacles. Our formulation lets us consider the possibility of non-point robots, whose locations in the workspace may cause collisions with obstacles due to the robots having 3D-geometries and being situated with complex orientations.
+
+We assume that the Extended Kalman Filter (EKF) localization algorithm \cite{IEEEhowto:thrun} is used to compute $\hat{x_t}$, an estimate of the robot's true configuration, $x_t$, at time $t$. The covariance of the EKF estimate of $x_t$ is given by $\Sigma_t$. We assume that there is a set  of already known landmarks in the environment, $L = {l_1,...,l_{n_l}}$, where $n_l$ is the number of landmarks, and that data association between sensor measurements and landmarks is known.
+%and that at each time $t$, the robot will receive measurements for all landmarks.
+
+Due to the Gaussian noise in the motion model, we expect that the robot will deviate from the nominal motion plan during its execution. To compensate for the motion uncertainty, we assume that the robot operates with a closed-loop feedback controller \cite{IEEEhowto:stengel}. We assume that there exists a linear feedback control law that operates on the EKF estimate of the robot configuration and attempts to keep the robot close to the nominal plan. This feedback policy is given as:% related to the deviation of the estimate of the robot's configuration, $\hat{x_t}$, from the nominal configuration, $x_t^*$ as:
+$$\bar{u_t} = L_{t+1}(\hat{x_t} - x_t^*) $$
+where $L_{t}$ is the control gain matrix, which is contingent on the choice of feedback controller \cite{IEEEhowto:stengel} and $\bar{u_t}$ is the necessary deviation from the nominal control input $u_t^*$ to account for the robot's deviation from the nominal plan. It follows that $u_t = \bar{u_t} + u_t^*$, where $u_t$ represents the true control input to be executed by the robot--given the deviation of the robot's estimated configuration $\hat{x_t}$ from the nominal configuration $x_t^*$.
+
+\subsection{Sources of Difficulty}
+Computing the probability of collision for a motion plan in practice is a difficult task. There are three key sources of the difficulty:
 \begin{enumerate}
-%\item Will robotic caregivers replace human caregivers?
-\item Can robotic caregivers provide the same quality of care as human caregivers?
-\item Can robotic caregivers ethically emulate the ``warm'' care that is expected of human caregivers, potentially deceiving vulnerable human beings? \cite{IEEEhowto:stahl}
+\item Uncertainty in robot motion and sensor models
+\item Dependent individual events of collision
+\item Computational time of Monte-Carlo simulations
 \end{enumerate}
 
-As the world's scientists and engineers attempt to provide care for the rising elderly population in the form of robotic caregivers, we must think carefully about these questions and more. However, before we proceed to look at the ethical concerns that arise from enabling robotic caregivers for the elderly, we must look at where we are now. What is the current state of robotic caregiver research and development?
+We proceed to describe each of these sources.
+\subsubsection{Model Uncertainty}
+Robot motion is often corrupted by noise. We find that when we command a robot to follow a nominal control input, it often does not follow the command exactly due to various factors--usually wheel slippage due to lack of uniformity of surfaces.
 
-\section{Robotic Caregivers Today}
-Robotic solutions today for care of the elderly are varied in their goals. Some robots address many of the physiological and functional needs of older people, such as helping with daily chores and assisting with issues of mobility and safety. Other robots are designed to meet the companionship needs of elderly, providing mental stimulation and emotional connection. A third category of robots monitors elderly individuals' activities--especially those with mental disorders, such as dementia \cite{IEEEhowto:robinson}. We proceed to look at a few examples of robots from each of these categories. Some robots overlap within each of these categories. 
+Furthermore, sensor measurements that are used to localize a robot are also corrupted by natural noise and innaccuracy. Using sensor measurements for localization naturally causes uncertainty in the robot's known position. When using a state estimate as an input to a feedback control loop to correct the robot's position, there is a subsequent uncertainty in the accuracy of the desired controller adjustment--despite the desired intention of following the nominal motion plan.
+
+\subsubsection{Dependence between Collision Events}
+A key feature of this problem is that the event of a collision not occurring at a configuration $x_t$ of a motion plan is \underline{not} independent of the event of a collision not occurring at previous configurations of the motion plan. More formally:
+$$p(x_t \in \mathcal{C}_F) \neq p\left(x_t \in \mathcal{C}_F | \bigwedge\limits_{i=0}^{t-1} x_i \in \mathcal{C}_F \right)$$
+
+Prior approaches to solving this problem {\color{red}{cite here}} often consider the events of collisions along the motion plan to be independent of each other, which can lead to an overly conservative estimate of the probability of collision for a motion plan. Incorporating the fact that the collision events (and non-collision events) are dependent on each other increases the difficultly of computing an accurate estimate of the probability of collision.
+
+\subsubsection{Computational Time of Monte-Carlo Simulations}
+
+Running a large number of Monte-Carlo simulation, each having a large number of particles, can--in theory--give the true probability of collision for a motion plan. The idea of a Monte-Carlo simulation is to simulate the motion of thousands of particles, each particle representing a potential configuration of a robot's configuration given uncertainty in the robot's true configuration $x_t$. By finding the proportion of particles that did not collide with obstacles at all during the entirety of a motion plan, we can have an estimate of the probability of collision.
+
+However, a single Monte-Carlo simulation is generally not sufficient, and we would need to average the proportions of colliding-particles across hundreds or even thousands of Monte-Carlo simulations to obtain an accurate estimate of the true probability of collision for the motion plan.
+
+Furthermore, running a single Monte-Carlo simulation with thousands of particles can be very computationally expensive due to the compounding of time required for collision checking. Running thousands of Monte-Carlo simulations compounds the computation time even further, causing this approach to be a poor idea in practice.% In this case, computing the probability of collision for a motion plan would often require more time than that of computing the actual motion plan!
+
+%This work attempts to enter the conversation regarding
+
+\subsection{Metric Evaluation}
+Given the sources of difficulty for this problem, we primarily strive to compute an \underline{accurate} estimate of the true probability of collision for a motion plan. We also seek to compute the probability of collision for the plan in an amount of time that is approximately less than or equal to the time required for a single Monte-Carlo simulation while within the error bounds of the average proportion of colliding particles that would be computed from executing hundreds of Monte-Carlo simulations with many particles in each simulation instance.
+
+\section{Method}
+
+\begin{algorithm}
+\caption{Calculate $y = x^n$}
+\begin{algorithmic} 
+\REQUIRE $n \geq 0 \vee x \neq 0$
+\ENSURE $y = x^n$
+\STATE $y \leftarrow 1$
+
+\IF{$n < 0$}
+\STATE $X \leftarrow 1 / x$
+\STATE $N \leftarrow -n$
+\ELSE
+\STATE $X \leftarrow x$
+\STATE $N \leftarrow n$
+\ENDIF
+
+\WHILE{$N \neq 0$}
+\IF{$N$ is even}
+\STATE $X \leftarrow X \times X$
+\STATE $N \leftarrow N / 2$
+\ELSE[$N$ is odd]
+\STATE $y \leftarrow y \times X$
+\STATE $N \leftarrow N - 1$
+\ENDIF
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+Our approach
 
 
-\subsection{Assistance Robots}
-Assistance robots are designed to assist elderly individuals with navigation and tasks around their homes. For example, the Guido robot, which was developed by researchers in Dublin, can assist frail and visually impaired individuals by navigating them through the environment. A robot called HIRB assists older people in bathing. Researchers at the Georgia Institute of Technology are developing COACH, a robot that would help people perform simple tasks such as hand washing \cite{IEEEhowto:robinson}. These are just a few examples of development of robots that provide physical assistance to elderly individuals in their daily living.
+\section{Results}
 
-\subsection{Companionship Robots}
-Companionship robots are designed to mentally stimulate and prove an emotional connection to the elderly. In general, companionship robots evoke a positive impact on the elderly. For example, Paro, a mechanical seal, and AIBO, a dog-like robot, have been shown to decrease depression and loneliness in older people after they interact with these robots in nursing home settings. Analysis of the market for Paro has shown that most individuals purchase Paro because,''they could not keep pets, the robot cannot get sick and the robot is easy to take care of, cute and can be hugged''\cite{IEEEhowto:robinson}. Similarly research with owners of the AIBO dog robot has shown how people can become attached to the robot as if it were a pet, yielding social rapport  and other psychological benefits. The technology for both Paro and AIBO has been shown to have a small learning curve and it is not overwhelming \cite{IEEEhowto:robinson}.
-
-\subsection{Monitoring Robots}
-Monitoring robots tend to passively observe elderly individuals. For example, the ALISA robot can monitor physiological symptoms and falls. The Pearl robot can monitor health and provide appointment reminders for elderly. The Hector robot reminds individuals to take medications and sends health information to a health practitioner \cite{IEEEhowto:robinson}. With many of these robots, there comes an issue of privacy, as the individuals who are being monitored must consent to monitoring. Assessing consent can cause an ethical dilemma in the case of individuals with dementia, who may not be willing to consent to being watched.
-
-\section{Ethical Concerns}
-Development of robotic caregivers, in the form of assistance, companionship, and monitoring robots, invites us to consider the ethical implications of enabling such robots to care for the elderly. We proceed to examine several of these questions below:
-
-\subsubsection{Reduced Social Interaction as Cruelty}
-Social interaction can have a measurable impact on the health and well-being of
-the elderly. Statistically, adults who do not participate in regular social interaction are more susceptible to depression. Given the prospect of robotic caretakers potentially eliminating much of the duties of human caretakers, we are faced with a question: Is depriving the elderly of social interaction a form of cruelty--an unethical act \cite{IEEEhowto:sharkey}? In other words, if human caregivers could be completely replaced with robotic caregivers, would that be an ethical execution? The answer to these questions becomes even more interesting when we consider companion robots. Can companion robots in particular replace human interaction? 
-
-\subsubsection{Objectification of the Elderly}
-The objectification of the elderly--especially individuals with dementia--becomes an interesting topic when we consider robotic caretakers. In particular, there is a question of who controls the robots: the elderly person or the caring facilities? Assistance robots that execute tasks, such as feeding and lifting, can reduce the workload of human carers; however, they can cause the elder people to feel less control over their lives than when they are cared for by humans. Sharkey and Sharkey assert that, ``If robots were to be used by human carers to lift and move elderly people insensitively, the well-being of those elderly people would be likely to be reduced'' \cite{IEEEhowto:sharkey}. This reduction in well-being would stem from the elderly individuals feeling that they are just objects to be managed by the robotic caregivers.
-
-\subsubsection{Roles and Tasks}
-What exactly should the role of a robot be in the caregiving process? What tasks should and should not be automated by robotic caregivers \cite{IEEEhowto:stahl}? Questions such as these are raised when we consider how robotic caregivers may synergize (or not synergize) with human caregivers.
-
-\subsubsection{Limits of Personal Autonomy}
-Development of assistive robots raises ethical concerns regarding how much autonomy an elderly person should be allowed to have. The amount of potential autonomy may significantly depend on medical assessments of medical ability \cite{IEEEhowto:sharkey}. Should an assistive robot watch and intervene in most of the decisions and actions of the elderly individual that it is caring for? Surely an assistive robot may want to intervene if an individual with dementia wants to jump off of a balcony. However, what if an individual wants to pursue a mundane and potentially dangerous action, e.g. standing on a chair to reach for an item on a shelf? When should a robotic caregiver intervene?
-
-\subsubsection{Accountability}
-There is also a question of who should be held accountable if a robotic caregiver does not perform its duty and causes injury or damage e.g. if it accidentally drops a senior citizen onto the floor or crashes them into a wall \cite{IEEEhowto:sharkey}. Who should take responsibility? The robot? The manufacturer? The senior citizen who provided the command to the robot?
-
-\subsubsection{Deception}
-The question of deception arises as we examine companion robots, which would serve as social companions to the elderly. Is it ethical for a robot to mimic human emotion and socially engage with the elderly? If it is deception, is it justifiable \cite{IEEEhowto:stahl}? Some argue that if a companion robot can meet the emotional needs of an elderly individual, then the ends justify the means.
-
-\subsubsection{Trust}
-If human caregivers were to withdraw completely from their jobs in favor of robotic caregivers, can we trust robotic caregivers to properly meet all needs of an elderly individual \cite{IEEEhowto:stahl}? In other words, how much can we trust robotic caretakers to perform their assigned roles?
-
-\subsubsection{Privacy}
-In the case of monitoring robots, there is an ethical dilemma regarding privacy. What data can be collected from monitoring elderly individuals? How is the data stored, and who has permission to access the monitoring records? Who owns the records and for how long \cite{IEEEhowto:stahl}? In the United States, these questions are addressed by the Health Insurance Portability and Accountability Act (HIPAA). Inserting stipulations for monitoring robots into HIPAA may be tricky.
-
-
-\section{Ethics in Future Development}
-The ethical concerns associated with the introduction of robotic caregivers makes it evident that we must embed ethics in automated caregiver research projects. In future development, we must:
-\begin{enumerate}
-\item Encourage cross-disciplinary collaboration between robotic caregiver researchers and clinicians
-\item Form a common framework for cross-disciplinary teams to answer ethical questions for robotic caregiver development
-\end{enumerate}
-We proceed to look at each of these goals.
-
-\subsection{Collaboration}
-Stahl and Coekelbergh assert that ethicists can collaborate with developers directly in the form of an ongoing dialogue about ethics during the research project; all researchers would be involved in this dialogue. Ethical issues raised by the interaction between elderly individuals and robotic caregivers would be addressed as part of research projects, inciting cooperation between robotics researchers, psychologists, and clinicians \cite{IEEEhowto:stahl}. However, this plan of action may be difficult to implement when cross-disciplinary collaboration is sparse among robotics researchers and clinicians.
-
-\subsection{Ethical Framework}
-If a cross-disciplinary collaborative team of researchers could be established, it would need to address how research into robotic caregivers matches a standard ethical framework. What is the best ethical framework to pursue as we continue future development in robotic caregivers? Stahl and Coekelbergh are proponents of a standard ethical framework, which would give researchers, funders, policymakers, and representatives from industry a set of questions worth exploring as they pursue their development. They term this framework ``AREA,'' which is an acronym for Anticipate, Reflect, Engage, and Act \cite{IEEEhowto:stahl}.
-\begin{enumerate}
-\item Anticipate
-\begin{itemize}
-\item Is the planned research methodology acceptable?
-\end{itemize}
-\item Reflect
-\begin{itemize}
-\item  Which mechanisms are used to reflect on process?
-\end{itemize}
-\item Engage
-\begin{itemize}
-\item How can we engage a wide group of stakeholders?
-\end{itemize}
-\item Act
-\begin{itemize}
-\item How can our research structure become flexible?
-\item What training is required?
-\item What infrastructure is required?
-\end{itemize}
-
-\end{enumerate}
-The framework consists of a wider set of scaffolding questions to permit researchers to efficiently discuss the ethical implications of robotic caregivers for the elderly.
+\section{Discussion}
 
 \section{Conclusion}
-Robotic caregiver development continues as many societies consider the rise of the elderly population and the reduction of potential caregivers. In this paper, we have examined a set of ethical concerns that are related to the introduction of robotic caregivers. Furthermore, we have looked at future directions to ensure that these ethical questions are considered. We have established that more cross-disciplinary collaboration between robotics researchers and other stakeholders would be necessary. We have also briefly examined a framework for a research team to consider as they address these ethical questions during the future development of robotic caregivers.
-
-Development of caregiving solutions is still in its infancy. As we continue development, we must tailor our actions towards ensuring the dignity and autonomy of the elderly individuals who may be cared for.
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
@@ -701,8 +707,7 @@ Development of caregiving solutions is still in its infancy. As we continue deve
 
 % use section* for acknowledgment
 \section*{Acknowledgment}
-The author would like to thank his parents, high school English teachers and university technical communications professors.
-
+The author would like to acknowledge Dmitry Berenson, Maani Ghaffari, and Valerie Chen for their helpful feedback.
 
 % Can use something like this to put references on a page
 % by themselves when using endfloat and the captionsoff option.
@@ -739,12 +744,11 @@ The author would like to thank his parents, high school English teachers and uni
 %\bibitem{IEEEhowto:kopka}H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
 %  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
 
-\bibitem{IEEEhowto:cameron}N.~Cameron. \emph{Will Robots Take Your Job?: A Plea for Consensus}. Malden, MA: Polity Press, 2017.
-\bibitem{IEEEhowto:gallagher} A.~Gallagher, D.~Nåden, D.~Karterud. ``Robots in elder care: Some ethical questions,'' Nursing Ethics, vol. 23(4), pp. 369-371, 2016.
-\bibitem{IEEEhowto:sharkey}A.~Sharkey, N.~Sharkey. ``Granny and the robots: ethical issues in robot care for the elderly.'' Ethics Information Technology Journal, 2012.
-\bibitem{IEEEhowto:stahl}B.~Stahl, M.~Coekelbergh. ``Ethics of healthcare robotics: Towards responsible research and innovation.'' Robotics and Autonomous Systems, vol. 86, pp. 152-161, 2016.
-\bibitem{IEEEhowto:robinson}H.~Robinson, B.~Macdonald, E.~Broadbent. ``The Role of Healthcare Robots for Older People at Home: A Review.'' International Journal of Social Robotics, Nov., pp. 575-591, 2014.
- 
+\bibitem{IEEEhowto:lavalle} S.~LaValle. \emph{Planning Algorithms}. Cambridge University Press, 2006.
+\bibitem{IEEEhowto:patil} S. Patil, J. van den Berg, and R. Alterovitz, “Estimating probability of collision for safe planning under Gaussian motion and sensing uncertainty,” in ICRA, 2012, pp. 3238-3244.
+\bibitem{IEEEhowto:stengel} R.~F.~Stengel, \emph{Optimal Control and Estimation}. Dover Publications, 1994.
+\bibitem{IEEEhowto:thrun} S.~Thrun, W.~Burgard, and D.~Fox. \emph{Probabilistic Robotics}. MIT Press, 2005.
+
 \end{thebibliography}
 
 % biography section
@@ -763,7 +767,7 @@ The author would like to thank his parents, high school English teachers and uni
 %\begin{IEEEbiography}{Ajaay Chandrasekaran}
 \begin{IEEEbiographynophoto}{Ajaay Chandrasekaran}
   received the BSE degree in computer science from the University of Michigan, Ann Arbor, MI, in 2017.
-  He is currently pursuing the MSE degree in electrical and computer engineering from the University of Michigan. His primary research interests include robotic motion planning under uncertainty and perception and planning for autonomous vehicles.
+  He is currently pursuing the MSE degree in electrical and computer engineering from the University of Michigan.% His primary research interests include robotic motion planning under uncertainty and perception and planning for autonomous vehicles.
 \end{IEEEbiographynophoto}
 
 \vfill
