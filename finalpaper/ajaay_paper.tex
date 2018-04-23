@@ -113,12 +113,13 @@
 % *** GRAPHICS RELATED PACKAGES ***
 %
 \ifCLASSINFOpdf
-  % \usepackage[pdftex]{graphicx}
+  \usepackage[pdftex]{graphicx}
   % declare the path(s) where your graphic files are
   % \graphicspath{{../pdf/}{../jpeg/}}
+  \graphicspath{{./}}
   % and their extensions so you won't have to specify these with
   % every instance of \includegraphics
-  % \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+  \DeclareGraphicsExtensions{.pdf,.jpeg,.png,PNG}
 \else
   % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
   % will default to the driver specified in the system graphics.cfg if no
@@ -176,6 +177,7 @@
 %
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage{algpseudocode}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
 % This package provides an algorithmic environment fo describing algorithms.
 % You can use the algorithmic environment in-text or within a figure
@@ -547,32 +549,37 @@ Furthermore, running a single Monte-Carlo simulation with thousands of particles
 Given the sources of difficulty for this problem, we primarily strive to compute an \underline{accurate} estimate of the true probability of collision for a motion plan. We also seek to compute the probability of collision for the plan in an amount of time that is approximately less than or equal to the time required for a single Monte-Carlo simulation while within the error bounds of the average proportion of colliding particles that would be computed from executing hundreds of Monte-Carlo simulations with many particles in each simulation instance.
 
 \section{Method}
+We propose a sampling-based method to estimate the probability of collision for an arbitrary motion plan. Our method adopts ideas from the the approach proposed by Patil, van den Berg, Alterovitz \cite{IEEEhowto:patil}, though their approach is a purely analytical method.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=3.5in]{motion_pic.PNG}
+\caption{Propagation and Truncation of Gaussian Distributions. Figure borrowed from Patil, van den Berg, Alterovitz 2012 \cite{IEEEhowto:patil}}
+\label{fig_sim}
+\end{figure}
+
+
+Hi there
+
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
 
 \begin{algorithm}
-\caption{Calculate $y = x^n$}
-\begin{algorithmic} 
-\REQUIRE $n \geq 0 \vee x \neq 0$
-\ENSURE $y = x^n$
-\STATE $y \leftarrow 1$
-
-\IF{$n < 0$}
-\STATE $X \leftarrow 1 / x$
-\STATE $N \leftarrow -n$
-\ELSE
-\STATE $X \leftarrow x$
-\STATE $N \leftarrow n$
-\ENDIF
-
-\WHILE{$N \neq 0$}
-\IF{$N$ is even}
-\STATE $X \leftarrow X \times X$
-\STATE $N \leftarrow N / 2$
-\ELSE[$N$ is odd]
-\STATE $y \leftarrow y \times X$
-\STATE $N \leftarrow N - 1$
-\ENDIF
-\ENDWHILE
-\end{algorithmic}
+  \caption{GMM Estimation of Probability of Collision}
+  \begin{algorithmic}[1]
+    \REQUIRE{$[x_0^*,u_0^*,...,x_N^*,u_N^*]$}
+    \ENSURE{$p_c$}
+    \STATE{INIT\_GMM}
+    \IF{some condition is true}
+      \STATE do some processing
+    \ELSIF{some other condition is true}
+      \STATE do some different processing
+    \ELSIF{some even more bizarre condition is met}
+      \STATE do something else
+    \ELSE
+      \STATE do the default actions
+    \ENDIF
+  \end{algorithmic}
 \end{algorithm}
 Our approach
 
