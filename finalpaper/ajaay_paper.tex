@@ -661,6 +661,21 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
     \STATE{${\mu}_i^*, {\Sigma}_i^*$ $\gets$ EKF\_CORRECT($\bar{\mu}_i^*,\bar{\Sigma}_i^*,z_i$)}
     
     \ENDFOR
+    \STATE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],p_i$ $\gets$ TRUNCATE\_GMM()}
+    
+    \STATE{$p_f \gets p_f * p_i$}
+    \ENDFOR
+    \STATE{$p_c \gets 1-p_f$}\\
+  \end{algorithmic}
+\label{gmm_estim}  
+\end{algorithm}
+
+
+\begin{algorithm}
+  \caption{TRUNCATE\_GMM}
+  \begin{algorithmic}[1]
+    \REQUIRE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],N_P$}
+    \ENSURE{$[\mu_1^*,\Sigma_1^*,...,\mu_{N_G}^*,\Sigma_{N_G}^*],p_i$}
     \STATE{$[\chi_1,...,\chi_{N_G}]$ $\gets$ SAMPLE\_GMM($N_p$)}
     \STATE{$C_c \gets 0$}
     \STATE{$[\bar{\chi_1},...\bar{\chi_{N_G}}] \gets [\emptyset,...,\emptyset]$}
@@ -683,30 +698,7 @@ Algorithm \ref{gmm_estim} portrays our sampling-based GMM collision probability 
 
     %Compute proportion of colliding articles
     \STATE{$p_i \gets \frac{C_c}{N_p}$}
-    \STATE{$p_i \gets 1-p_i$}
-    \STATE{$p_f \gets p_f * p_i$}
-    \ENDFOR
-    \STATE{$p_c \gets 1-p_f$}\\
-  \end{algorithmic}
-\label{gmm_estim}  
-\end{algorithm}
-
-
-\begin{algorithm}
-  \caption{INIT\_GMM}
-  \begin{algorithmic}[1]
-    \REQUIRE{$[x_0^*,u_0^*,...,x_N^*,u_N^*]$}
-    \ENSURE{$p_c$}
-    \STATE{INIT\_GMM()}
-    \IF{some condition is true}
-      \STATE do some processing
-    \ELSIF{some other condition is true}
-      \STATE do some different processing
-    \ELSIF{some even more bizarre condition is met}
-      \STATE do something else
-    \ELSE
-      \STATE do the default actions
-    \ENDIF
+    \STATE{$p_i \gets 1-p_i$}\\%
   \end{algorithmic}
 \label{init_gmm}
 \end{algorithm}
