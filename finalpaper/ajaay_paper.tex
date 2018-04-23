@@ -556,6 +556,8 @@ Given the sources of difficulty for this problem, we primarily strive to compute
 \end{figure}
 
 \section{Method}
+\subsection{Method Basis}
+
 We propose a sampling-based method paired with the use of a Gaussian Mixture Model (GMM) to estimate the probability of collision for a motion plan. Our method adopts ideas from the the approach proposed by Patil, van den Berg, and Alterovitz \cite{IEEEhowto:patil}. However, our approach differs in that we do not assume that the environment obstacles can be represented as constraints on the robot location in the workspace, and we assume that a collision checker exists instead.
 
 Figure \ref{patil_figure} portrays the approach recognized in \cite{IEEEhowto:patil}, which estimates the probability of collision for a motion plan by propagating a Kalman Filter (KF) estimate of a robot's state and truncating the distribution of the estimate with respect to obstacles. Patil et al. make the observation that the distribution of the robot's configuration at a timestep $t$--conditioned on the configuration $x_i \notin \mathcal{C}_F$, $\forall i, 0 \leq i < t $ being collision-free, can be represented by truncating the KF estimate at $x_t$ with respect to the obstacles. They also note that the proportion of the distribution that has been truncated by the obstacles would represent the conditional probability of collision for that state of the motion plan.
@@ -570,16 +572,12 @@ The approach of Patil et al. makes two more important assumptions that are worth
 
 We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to release these assumptions as we define our sampling-based GMM approach to estimate the probability of collision.
 
-%\begin{figure*}[!t]
-%\centering
-%\subfloat[Case I]{\includegraphics[width=0.5in]{one_gaussian.png}%
-%\label{one_gauss}}
-%\hfil
-%\subfloat[Case II]{\includegraphics[width=0.5in]{two_gaussians.png}%
-%\label{two_gauss}}
-%\caption{Simulation results for the network.}
-%\label{one_two_gauss}
-%\end{figure*}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=3.5in]{combined_pic.png}
+\caption{Our GMM approach attempts to handle situations where the distribution obtained by the truncation of the robot's configuration distribution by obstacles may not necessarily be represented sufficiently by a single Gaussian. [Left] When the EKF estimate of the robot's configuration (orange ellipse) is truncated, a single Gaussian distribution (green ellipse) may not best represent the subsequent collision-free distribution. [Right] A mixture of two Gaussians may represent the truncated collision-free distribution better than a single Gaussians.}
+\label{ajaay_justification}
+\end{figure}
 
 \begin{figure*}[!t]
 \centering
@@ -594,15 +592,29 @@ We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to 
 \hfil
 \subfloat (d) {\includegraphics[width=1.55in]{step4.png}%
 \label{step_four}}
-\caption{Sampling-based GMM Algorithm applied to Mixture of 2 Gaussians. (a) Initialize mixture components with same initial mean $x_0^*$ and covariance $\Sigma_0$, as well as equal weights (Means shown as different here to highlight distinction). Gaussians are represented by blue ellipses. (b) Propagate Gaussians in mixture to next state of motion plan via EKF prediction step. Updated Gaussians are represented by red ellipses. (c) Update Gaussians via EKF correction step based on measurements (orange ellipses). Then, sample $N_p$ configurations from GMM based on weights. Check which configurations are in collision. Red dots represent colliding configurations and blue dots represent collision-free configurations. (d) Update mean and covariance of each Gaussian analytically based on the set of collision-free configurations contained in it. Update each mixture component's weight to be the proportion of the total non-colliding configurations that it contains.}
+\caption{Sampling-Based GMM Collision Estimation Algorithm applied to Mixture of 2 Gaussians. (a) Initialize mixture components with same initial mean $x_0^*$ and covariance $\Sigma_0$, as well as equal weights (Means shown as different here to highlight distinction). Gaussians are represented by blue ellipses. (b) Propagate Gaussians in mixture to next state of motion plan via EKF prediction step. Updated Gaussians are represented by red ellipses. (c) Update Gaussians via EKF correction step based on measurements (orange ellipses). Then, sample $N_p$ configurations from GMM based on weights. Check which configurations are in collision. Red dots represent colliding configurations and blue dots represent collision-free configurations. (d) Update mean and covariance of each Gaussian analytically based on the set of collision-free configurations contained in it. Update each mixture component's weight to be the proportion of the total non-colliding configurations that it contains.}
 \label{algorithm_steps}
 \end{figure*}
+
+
+\subsection{Algorithm}
+
+%\begin{figure*}[!t]
+%\centering
+%\subfloat[Case I]{\includegraphics[width=0.5in]{one_gaussian.png}%
+%\label{one_gauss}}
+%\hfil
+%\subfloat[Case II]{\includegraphics[width=0.5in]{two_gaussians.png}%
+%\label{two_gauss}}
+%\caption{Simulation results for the network.}
+%\label{one_two_gauss}
+%\end{figure*}
 
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 
 \begin{algorithm}
-  \caption{GMM Estimation of Probability of Collision}
+  \caption{Sampling-Based GMM Collision Estimation}
   \begin{algorithmic}[1]
     \REQUIRE{$[x_0^*,u_0^*,...,x_N^*,u_N^*]$}
     \ENSURE{$p_c$}
@@ -622,6 +634,7 @@ Our approach
 
 
 \section{Results}
+Hi
 
 \section{Discussion}
 
