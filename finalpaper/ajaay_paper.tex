@@ -498,7 +498,7 @@ We assume the existence of a nominal plan computed by a motion planner. The nomi
 $$[x_0^*,u_0^*,...,x_N^*,u_N^*]$$
 where $x_t^* = g(x_{t-1}^*,u_{t-1}^*,0)$ for $0 < t \leq N$ , where $N$ is the number of configurations in the motion plan.
 
-With the preliminary notation established, we can now express our problem statement. Our goal is to estimate the probability of collision $p_c$ for the nominal plan. More formally, this probability is represented as:
+With the preliminary notation established, we express our problem statement. Our goal is to estimate the probability of collision $p_c$ for the nominal plan. More formally, this probability is represented as:
 $$p_c = p\left(\[ \bigvee\limits_{t=0}^N x_t^* \notin \mathcal{C}_F \]\right)$$
 where $\mathcal{C}_F \subset \mathcal{C}$ represents the space of non-colliding configurations.
 
@@ -548,18 +548,55 @@ Furthermore, running a single Monte-Carlo simulation with thousands of particles
 \subsection{Metric Evaluation}
 Given the sources of difficulty for this problem, we primarily strive to compute an \underline{accurate} estimate of the true probability of collision for a motion plan. We also seek to compute the probability of collision for the plan in an amount of time that is approximately less than or equal to the time required for a single Monte-Carlo simulation while within the error bounds of the average proportion of colliding particles that would be computed from executing hundreds of Monte-Carlo simulations with many particles in each simulation instance.
 
-\section{Method}
-We propose a sampling-based method to estimate the probability of collision for an arbitrary motion plan. Our method adopts ideas from the the approach proposed by Patil, van den Berg, Alterovitz \cite{IEEEhowto:patil}, though their approach is a purely analytical method.
-
 \begin{figure}[!t]
 \centering
 \includegraphics[width=3.5in]{motion_pic.PNG}
-\caption{Propagation and Truncation of Gaussian Distributions. Figure borrowed from Patil, van den Berg, Alterovitz 2012 \cite{IEEEhowto:patil}}
-\label{fig_sim}
+\caption{Propagation and Truncation of State Estimate Distribution. Figure borrowed from Patil, van den Berg, Alterovitz 2012. ``The probabilities of collision at each stage of the plan are conditioned on the previous stages being collision free. We truncate a priori distributions with respect to obstacles to discount plan executions that collide with obstacles (black disks). Propagating the truncated distributions (black ellipses) accounts for only the collision free samples (red disks), resulting in accurate estimation of the probability of collision. Using the unconditional distributions (gray ellipses) to estimate the collision probability results in a very conservative estimate.''\cite{IEEEhowto:patil}}
+\label{patil_figure}
 \end{figure}
 
+\section{Method}
+We propose a sampling-based method paired with the use of a Gaussian Mixture Model (GMM) to estimate the probability of collision for a motion plan. Our method adopts ideas from the the approach proposed by Patil, van den Berg, and Alterovitz \cite{IEEEhowto:patil}. However, our approach differs in that we do not assume that the environment obstacles can be represented as constraints on the robot location in the workspace, and we assume that a collision checker exists instead.
 
-Hi there
+Figure \ref{patil_figure} portrays the approach recognized in \cite{IEEEhowto:patil}, which estimates the probability of collision for a motion plan by propagating a Kalman Filter (KF) estimate of a robot's state and truncating the distribution of the estimate with respect to obstacles. Patil et al. make the observation that the distribution of the robot's configuration at a timestep $t$--conditioned on the configuration $x_i \notin \mathcal{C}_F$, $\forall i, 0 \leq i < t $ being collision-free, can be represented by truncating the KF estimate at $x_t$ with respect to the obstacles. They also note that the proportion of the distribution that has been truncated by the obstacles would represent the conditional probability of collision for that state of the motion plan.
+
+The approach of Patil et al. is purely analytical. It truncates the KF estimate of the robot state by sequentially applying each obstacle constraint to truncate the Gaussian distribution of the state estimate using analytical techniques from existing literature. They assume that the truncation of a Gaussian distribution by the obstacle constraints subsequently yields another Gaussian distribution.
+
+The approach of Patil et al. makes two more important assumptions that are worth noting when they truncate the KF estimate with respect to obstacles:
+\begin{enumerate}
+  \item The obstacles in the environment can be expressed as linear constraints on the robot's location in the workspace
+  \item The free region containing the robot's configuration at time $t$ is convex
+\end{enumerate}
+
+We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to release these assumptions as we define our sampling-based GMM approach to estimate the probability of collision.
+
+%\begin{figure*}[!t]
+%\centering
+%\subfloat[Case I]{\includegraphics[width=0.5in]{one_gaussian.png}%
+%\label{one_gauss}}
+%\hfil
+%\subfloat[Case II]{\includegraphics[width=0.5in]{two_gaussians.png}%
+%\label{two_gauss}}
+%\caption{Simulation results for the network.}
+%\label{one_two_gauss}
+%\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\subfloat (a) {\includegraphics[width=1.55in]{step1.png}%
+\label{step_one}}
+\hfil
+\subfloat (b) {\includegraphics[width=1.55in]{step2.png}%
+\label{step_two}}
+\hfil
+\subfloat (c) {\includegraphics[width=1.55in]{step3.png}%
+\label{step_three}}
+\hfil
+\subfloat (d) {\includegraphics[width=1.55in]{step4.png}%
+\label{step_four}}
+\caption{Simulation results for the network.}
+\label{algorithm_steps}
+\end{figure*}
 
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
 \renewcommand{\algorithmicensure}{\textbf{Output:}}

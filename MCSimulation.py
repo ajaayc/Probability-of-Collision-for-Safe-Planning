@@ -184,7 +184,7 @@ if __name__ == "__main__":
     #Monte Carlo Simulation Stuff
     elif simoption == "MC":
 
-        numSimulations = 300
+        numSimulations = 100
 
         simTimes = []
         proportions = []
