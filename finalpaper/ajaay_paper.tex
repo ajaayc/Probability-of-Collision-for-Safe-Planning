@@ -594,7 +594,7 @@ We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to 
 \hfil
 \subfloat (d) {\includegraphics[width=1.55in]{step4.png}%
 \label{step_four}}
-\caption{Simulation results for the network.}
+\caption{Sampling-based GMM Algorithm applied to Mixture of 2 Gaussians. (a) Initialize mixture components with same initial mean $x_0^*$ and covariance $\Sigma_0$, as well as equal weights (Means shown as different here to highlight distinction). Gaussians are represented by blue ellipses. (b) Propagate Gaussians in mixture to next state of motion plan via EKF prediction step. Updated Gaussians are represented by red ellipses. (c) Update Gaussians via EKF correction step based on measurements (orange ellipses). Then, sample $N_p$ configurations from GMM based on weights. Check which configurations are in collision. Red dots represent colliding configurations and blue dots represent collision-free configurations. (d) Update mean and covariance of each Gaussian analytically based on the set of collision-free configurations contained in it. Update each mixture component's weight to be the proportion of the total non-colliding configurations that it contains.}
 \label{algorithm_steps}
 \end{figure*}
 
