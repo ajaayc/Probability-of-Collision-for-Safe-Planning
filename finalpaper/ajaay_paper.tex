@@ -483,23 +483,28 @@
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-Prior to executing a motion plan, we often wish to have a notion of how safe the plan's execution may be. Though a motion planner may yield us an ``optimal'' motion plan, which could traverse the shortest distance through a work space to reach a goal configuration, the plan can be very unsafe. Optimal motion plans can often hug obstacles very closely, yielding a likelihood of a collision occurring if a robot were to slip and not follow a control input correctly.
+Prior to executing a motion plan, we often wish to have a notion of how safe the plan's execution may be. Though a motion planner may yield us an ``optimal'' motion plan, which could traverse the shortest distance through a workspace to reach a goal configuration, the plan can be very unsafe. Optimal motion plans can often hug obstacles very closely, yielding a likelihood of a collision occurring if a robot were to slip and not follow a control input correctly.
 
 The event of a collision can be very deadly in the case of autonomous vehicles, which would be trusted to safely transport passengers from one location to another. An application such as the autonomous steering of a surgical needle through the human body may also have significant safety concerns, as we would not want the needle to forcefully jam itself into delicate organs in its attempt to reach a destination.
 
 Given the possibility that a collision may occur for a motion plan, many motion planners attempt to adjust the plan or produce a new plan that is much safer than the original plan. Assessing the possibility that a collision may occur is thus extremely essential for motion planning.
 
-Quantifying the possibility of a collision occurring is generally accomplished by determining the probability that a robot executing a given motion plan will experience a collision. Unfortunately, determining the probability of collision for a motion plan can be very extremely difficult in practice. One key source of difficulty is uncertainty in a robot's motion and sensor information. Motion uncertainty can cause a robot to not obey a control input accurately, leading it to veer from the desired configuration intended by the motion plan. Sensor uncertainty can lead to inaccurate estimates of a robot state during localization approaches, which can subsequently cause the robot's controller to incorrectly correct the robot's course so that it follows the motion plan.
+Quantifying the possibility of a collision occurring is generally accomplished by determining the probability that a robot executing a given motion plan will experience a collision. Unfortunately, determining the probability of collision for a motion plan can be extremely difficult in practice. One key source of difficulty is uncertainty in a robot's motion and sensor information. Motion uncertainty can cause a robot to not obey a control input accurately, leading it to veer from the desired configuration intended by the motion plan. Sensor uncertainty can lead to inaccurate estimates of a robot state during localization approaches, which can subsequently cause the robot's controller to incorrectly correct the robot's course in an attempt to return to following the motion plan.
 
 Another key source of difficulty is the dependence of collision events across the motion plan. Intuitively, the event of a robot colliding at a single waypoint of a motion plan can be contingent on the event of a robot colliding at previous waypoints of the motion plan. The dependence between these events complicates the problem of estimating the probability of collision.
 
 Simulation approaches attempt to determine the probability of collision by repeatedly propagating a robot through the motion plan thousands of times and examining how many times it collides with an obstacle. While these approaches are theoretically sound, they can be very expensive to conduct in practice. Often, running the simulations can require more time than that required to search for a motion plan! This causes simulation approaches to be infeasible in practice.
 
-We propose a sampling-based approach to estimate the probability of collision for a motion plan that utilizes a collision-checker on robot configurations. Our approach attempts to compute the distribution of feasible robot state's at each waypoint of the motion plan conditioned on the prior states being collision-free.
+We propose a sampling-based approach to estimate the probability of collision for a motion plan that utilizes a collision-checker on robot configurations. Our approach attempts to compute the distribution of feasible robot configurations at each waypoint of the motion plan conditioned on the prior configurations being collision-free.
 
 \section{Related Work}
+Methods for computing the probability of collision for a motion plan are vast. Many existing methods for computing the probability of collision rely on the assumption that we can formulate obstacles as constraints on the set of feasible configurations of a robot. Du Toit et al. proposed a ``linear-chance constraint'' method  \cite{IEEEhowto:dutoit}. Their method assumes knowledge of constraints on the robot's set of feasible configurations and examines the probability that different constraints may be violated by the robot during execution of a motion plan.
 
+Patil et al. proposed an analytical approach for computing the probability of collision for a motion plan \cite{IEEEhowto:patil}. Their method also assumes knowledge of obstacle constraints in the environment and proposes an approach to compute the distributions of collision-free robot states at each waypoint of the motion plan by truncating the Gaussian distribution estimate with respect to the constraints. This approach considers the dependence of collision events across the waypoints of the motion plan. However, the assumption of already-known obstacle constraints may not be valid in practice.
 
+van den Berg et al. propose an approach to compute the probability of collision for a motion plan by using a distance-to-obstacle checker to gauge a robot's maximum clearance from an obstacle. This approach does not assume the knowledge of obstacle constraints; however, it incorrectly assumes that the events of collision during the motion plan are independent of each other \cite{IEEEhowto:van_den_berg}.
+
+We base our approach on insights of the approach from Patil et al. \cite{IEEEhowto:patil}, considering the fact that collision events during the motion plan are not independent. However, we alter the formulation to assume that the obstacle constraints of the environment are not already known and that we instead have a collision checker, which can determine whether an arbitrary robot configuration is in collision.
 
 \section{Estimating Probability of Collision}
 \subsection{Problem Statement}
@@ -869,7 +874,7 @@ We then executed our algorithm with 1, 2, and 3 mixture components. We refer to 
   \end{center}
 \end{table}
 
-Each of the different GMM configurations are compared in Table \ref{tab:table1} alongside the Monte-Carlo simulation estimate of the probablility of collision. \underline{Unfortunately}, we find that our method performs poorly compared to the ground truth probability of collision deduced from the Monte-Carlo simulations. We see thatour GMM method estimates the probability of collision on average to be 0.63 and this estimate does not change at all even if we alter the number of GMM components. This equates to a \%31 average error from the ground truth probability of collision estimated from the Monte-Carlo simulations, 0.9348.
+Each of the different GMM configurations are compared in Table \ref{tab:table1} alongside the Monte-Carlo simulation estimate of the probablility of collision. \underline{Unfortunately}, we find that our method performs poorly compared to the ground truth probability of collision deduced from the Monte-Carlo simulations. We see that our GMM method estimates the probability of collision on average to be 0.63 and this estimate does not change at all even if we alter the number of GMM components. This equates to a 31\% average error from the ground truth probability of collision estimated from the Monte-Carlo simulations, 0.9348.
 
 Our method requires slightly less time on average than a single Monte-Carlo simulation, which is expected since our algorithm has approximately the same computational complexity.
 
@@ -890,7 +895,7 @@ Though our approach did not seem to be successful in practice, we hope that the 
 
 For future work, we would hope to investigate sources of error in our algorithm. Primarily, we would look at attempts to produce a KF estimate of the deviation of a robot's configuration from the nominal configuration, rather than a KF estimate of the robot's configuration. We believe that this could be a likely issue in our approach.
 
-We also would attempt to alter our algorithm slightly to obtain better performance. One approach in mind is to alter how we assign weights to the components of the GMM, perhaps considering looking at another metric asside from proportion of non-collding configurations across all GMM samples to assign the $\lambda$ weights. Another idea is to utilize approaches from machine learning, i.e. the EM algorithm, to learn a GMM representing the conditional distribution of collision-free configurations at a waypoint of a motion plan.
+We also would attempt to alter our algorithm slightly to obtain better performance. One approach in mind is to alter how we assign weights to the components of the GMM, perhaps considering looking at another metric aside from proportion of non-colliding configurations across all GMM samples to assign the $\lambda$ weights. Another idea is to utilize approaches from machine learning, i.e. the EM algorithm, to learn a GMM representing the distribution of collision-free configurations at a waypoint of a motion plan.
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
@@ -1053,12 +1058,13 @@ The author would like to acknowledge Dmitry Berenson, Maani Ghaffari, and Valeri
 %\bibitem{IEEEhowto:kopka}H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
 %  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
 
+\bibitem{IEEEhowto:dutoit} N. E. du Toit and J. W. Burdick, \emph{Probabilistic collision checking with chance constraints}, IEEE Trans. Robotics, vol. 27, pp. 809–815, 2011.
 \bibitem{IEEEhowto:lavalle} S.~LaValle. \emph{Planning Algorithms}. Cambridge University Press, 2006.
-\bibitem{IEEEhowto:patil} S. Patil, J. van den Berg, and R. Alterovitz, “Estimating probability of collision for safe planning under Gaussian motion and sensing uncertainty,” in ICRA, 2012, pp. 3238-3244.
-\bibitem{IEEEhowto:stengel} R.~F.~Stengel, \emph{Optimal Control and Estimation}. Dover Publications, 1994.
+\bibitem{IEEEhowto:patil} S. Patil, J. van den Berg, and R. Alterovitz, \emph{Estimating probability of collision for safe planning under Gaussian motion and sensing uncertainty}, in ICRA, 2012, pp. 3238-3244.
 \bibitem{IEEEhowto:sanderson} C.~Sanderson, R.~Curtin. \emph{Armadillo: a template-based C++ library for linear algebra}. Journal of Open Source Software, Vol. 1, pp. 26, 2016.
+\bibitem{IEEEhowto:stengel} R.~F.~Stengel, \emph{Optimal Control and Estimation}. Dover Publications, 1994.
 \bibitem{IEEEhowto:thrun} S.~Thrun, W.~Burgard, and D.~Fox. \emph{Probabilistic Robotics}. MIT Press, 2005.
-\bibitem{IEEEhowto:van_den_berg}J.~van den Berg, P.~Abbeel, and K.~Goldberg, “LQG-MP: Optimized path planning for robots with motion uncertainty and imperfect state information,” in Int. Journal of Robotics Research, vol. 30, no. 7, 2011, pp. 895–913.
+\bibitem{IEEEhowto:van_den_berg}J.~van den Berg, P.~Abbeel, and K.~Goldberg, \emph{“LQG-MP: Optimized path planning for robots with motion uncertainty and imperfect state information,”} in Int. Journal of Robotics Research, vol. 30, no. 7, 2011, pp. 895–913.
 
 \end{thebibliography}
 
