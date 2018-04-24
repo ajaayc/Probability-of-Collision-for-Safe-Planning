@@ -448,7 +448,7 @@
 % As a general rule, do not put math, special symbols or citations
 % in the abstract or keywords.
 \begin{abstract}
-  This is the abstract.
+  Assessing the safety of a motion plan prior to its execution is often essential in applications ranging from autonomous vehicles to medical needle steering. Uncertainty in a robot's motion and sensor information contributes to the possibility that a robot may collide during execution of a plan. We quantify the safety of a motion plan for a robot as the probability that a collision will occur at any point in the robot's execution of the motion plan. We propose a sampling-based approach paired with Gaussian Mixture Models (GMMs) to estimate the probability of collision for a motion plan. We test our approach on the case of the PR2 robot. Our approach is not very successful on our test case; however, we hope that it highlights ideas that can guide us towards more accurately and efficiently estimating a motion plan's probability of collision.
 \end{abstract}
 
 % Note that keywords are not normally used for peerreview papers.
@@ -503,7 +503,7 @@ $$[x_0^*,u_0^*,...,x_N^*,u_N^*]$$
 where $x_t^* = g(x_{t-1}^*,u_{t-1}^*,0)$ for $0 < t \leq N$ , where $N$ is the number of configurations in the motion plan.
 
 With the preliminary notation established, we express our problem statement. Our goal is to estimate the probability of collision $p_c$ for the nominal plan. More formally, this probability is represented as:
-$$p_c = p\left(\[ \bigvee\limits_{t=0}^N x_t^* \notin \mathcal{C}_F \]\right)$$
+$$p_c = p\left(\bigvee\limits_{t=0}^N x_t^* \notin \mathcal{C}_F \right)$$
 where $\mathcal{C}_F \subset \mathcal{C}$ represents the space of non-colliding configurations.
 
 \subsection{Formulation and Assumptions}
