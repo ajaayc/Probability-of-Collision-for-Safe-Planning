@@ -483,9 +483,23 @@
 % 
 % Here we have the typical use of a "T" for an initial drop letter
 % and "HIS" in caps to complete the first word.
-\IEEEPARstart{T}he use of robots in elderly care is becoming increasingly likely throughout the world, as the population of elderly people is beginning to overtake the number of potential caregivers. 
+Prior to executing a motion plan, we often wish to have a notion of how safe the plan's execution may be. Though a motion planner may yield us an ``optimal'' motion plan, which could traverse the shortest distance through a work space to reach a goal configuration, the plan can be very unsafe. Optimal motion plans can often hug obstacles very closely, yielding a likelihood of a collision occurring if a robot were to slip and not follow a control input correctly.
+
+The event of a collision can be very deadly in the case of autonomous vehicles, which would be trusted to safely transport passengers from one location to another. An application such as the autonomous steering of a surgical needle through the human body may also have significant safety concerns, as we would not want the needle to forcefully jam itself into delicate organs in its attempt to reach a destination.
+
+Given the possibility that a collision may occur for a motion plan, many motion planners attempt to adjust the plan or produce a new plan that is much safer than the original plan. Assessing the possibility that a collision may occur is thus extremely essential for motion planning.
+
+Quantifying the possibility of a collision occurring is generally accomplished by determining the probability that a robot executing a given motion plan will experience a collision. Unfortunately, determining the probability of collision for a motion plan can be very extremely difficult in practice. One key source of difficulty is uncertainty in a robot's motion and sensor information. Motion uncertainty can cause a robot to not obey a control input accurately, leading it to veer from the desired configuration intended by the motion plan. Sensor uncertainty can lead to inaccurate estimates of a robot state during localization approaches, which can subsequently cause the robot's controller to incorrectly correct the robot's course so that it follows the motion plan.
+
+Another key source of difficulty is the dependence of collision events across the motion plan. Intuitively, the event of a robot colliding at a single waypoint of a motion plan can be contingent on the event of a robot colliding at previous waypoints of the motion plan. The dependence between these events complicates the problem of estimating the probability of collision.
+
+Simulation approaches attempt to determine the probability of collision by repeatedly propagating a robot through the motion plan thousands of times and examining how many times it collides with an obstacle. While these approaches are theoretically sound, they can be very expensive to conduct in practice. Often, running the simulations can require more time than that required to search for a motion plan! This causes simulation approaches to be infeasible in practice.
+
+We propose a sampling-based approach to estimate the probability of collision for a motion plan that utilizes a collision-checker on robot configurations. Our approach attempts to compute the distribution of feasible robot state's at each waypoint of the motion plan conditioned on the prior states being collision-free.
 
 \section{Related Work}
+
+
 
 \section{Estimating Probability of Collision}
 \subsection{Problem Statement}
