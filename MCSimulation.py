@@ -201,7 +201,7 @@ if __name__ == "__main__":
     #--------------------
     #GMM Stuff
     if simoption == "GMM":
-        numGaussians = 2
+        numGaussians = 3
         numGMMSamples = numParticles
         MCModule.SendCommand('setNumGaussians ' + str(numGaussians))
         MCModule.SendCommand('setNumGMMSamples ' + str(numGMMSamples))

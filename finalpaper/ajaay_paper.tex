@@ -157,7 +157,8 @@
 
 % *** MATH PACKAGES ***
 %
-%\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsmath}
 % A popular package from the American Mathematical Society that provides
 % many useful and powerful commands for dealing with mathematics.
 %
@@ -755,9 +756,61 @@ Suppose that $N_p$ represents the number of samples (or the number of particles 
 
 %Furthermore, there is no formal proof that the algorithm would succeed in accurately estimating the probability of collision for a motion planning. 
 
-\section{Results}
-Hi
+\begin{figure}[!t]
+\centering
+\includegraphics[width=3.5in]{env_setup.png}
+\caption{Experimental Setup for Our Method with PR2 Robot. The black dots represent the nominal motion plan to be executed by the PR2. The green dots represent landmarks for the EKF localization.}
+\label{pr2_setup}
+\end{figure}
 
+
+\section{Results}
+We evaluate our method on a motion plan for the PR2 robot to gauge how well it performs in general. The PR2 robot navigates its environment under the guidance of noisy sensor measurements and with noise in its motion.
+
+We design our experiments to answer the question: Can our algorithm execute in about as much time as a single Monte-Carlo simulation and obtain a reasonable estimate of the probability of collision without having to average results from executing hundreds of Monte-Carlo simulations?
+
+We initialize our method with a nominal motion plan computed using an A* planner. We tested our C++ implementation on a 4-core Intel 2.20GHz $\text{i5}^{\text{TM}}$ PC. We use the OpenRave Motion Planning framework and the Armadillo linear algebra library \cite{IEEEhowto:sanderson} for our experiments.
+
+The experimental setup, including the environment and nominal motion plan, is depicted in Figure \ref{pr2_setup}.
+
+\subsection{Models and Parameters}
+We consider the PR2 robot to be navigating in a 2D environment with obstacles (Figure \ref{pr2_setup}). The state of the robot $\textbf{x} = [x,y,\theta]^T \in \mathbb{R}^3$, consists of its position [x,y], and its orientation $\theta$. The control input $\textbf{u} = [\delta_{rot1},\delta_{trans},\delta_{rot2}]^T$ represents the robot's odometry, which is encoded as a sequence of commands: a rotation, a straight-line translation, and a second rotation \cite{IEEEhowto:thrun} [Chapter 5]. The motion noise is represented as $\textbf{m} = [\tilde{x},\tilde{y},\tilde{\theta}]^T \sim \mathcal{N}(0,R)$, where $R \in \mathbb{R}^{3x3}$ represents the covariance of noise of the robot's motion in the configuration space. 
+
+The motion model of the robot is given as:
+%$$\begin{bmatrix}1 \\
+%  5 \\
+%  -4 \\
+%  0\end{bmatrix}$$
+
+  $$g(\textbf{x},\textbf{u},\textbf{m}) =\begin{bmatrix}
+  x + \delta_{trans}cos(\theta + \delta_{rot1})\\
+  y + \delta_{trans}sin(\theta + \delta_{rot1})\\
+  \theta + \delta_{rot1} + \delta_{rot2}\\
+\end{bmatrix} + \begin{bmatrix}
+  \epsilon_{m1} \\
+  \epsilon_{m2} \\
+  \epsilon_{m3}
+\end{bmatrix}$$
+
+%\begin{bmatrix}
+%  \epsilon_{\alpha_1\delta_{rot1}^2 + \alpha_2\delta_{trans}^2} \\
+%  \epsilon_{\alpha_3\delta_{trans}^2 + \alpha_4\delta_{rot1}^2 + \alpha_4\delta_{rot2}^2} \\
+%  \epsilon_{\alpha_1\delta_{rot2}^2 + \alpha_2\delta_{trans}^2}
+%\end{bmatrix}
+
+where the notation $\epsilon_i$ represents a zero-mean Gaussian noise variable with variance $i$. Following the notation in Thrun, 2005 \cite{IEEEhowto:thrun}, we can specify parameters $[\alpha_1,\alpha_2,\alpha_3,\alpha_4]$ to encode the amount of noise in the robot's motion. Furthermore, we can compute the matrix $R = VMV^T$, where $V = \dfrac{\partial g}{\partial x}$, and $M = diag(\alpha_1\delta_{rot1}^2 + \alpha_2\delta_{trans}^2,\alpha_3\delta_{trans}^2 + \alpha_4\delta_{rot1}^2 + \alpha_4\delta_{rot2}^2,\alpha_1\delta_{rot2}^2 + \alpha_2\delta_{trans}^2)$.
+
+The PR2 robot localizes itself using noisy distance measurements from eight landmarks, each landmark $i$ being described as $l_i = [l_x,l_y]^T$. The sensor noise is represented as $\textbf{n} = [\tilde{z}] \sim \mathcal{N}(0,Q)$, where $Q \in \mathbb{R}^{1x1}$ represents the sensor noise . These measurements are represented by the following sensor model:
+$$h(\textbf{x},\textbf{l},\textbf{n}) = \sqrt{(l_x - x)^2 + (l_y - y)^2} + \epsilon_Q$$
+
+%$\[
+%   \begin{bmatrix} 
+%      1 & 0 & 0 & 0 \\ 
+%      0 & 1 & 0 & 0 \\ 
+%      0 & 0 & 1 & 0 \\
+%      0 & 0 & 0 & 1 
+%   \end{bmatrix}
+%\]$
 
 \section{Discussion}
 
@@ -927,6 +980,7 @@ The author would like to acknowledge Dmitry Berenson, Maani Ghaffari, and Valeri
 \bibitem{IEEEhowto:lavalle} S.~LaValle. \emph{Planning Algorithms}. Cambridge University Press, 2006.
 \bibitem{IEEEhowto:patil} S. Patil, J. van den Berg, and R. Alterovitz, “Estimating probability of collision for safe planning under Gaussian motion and sensing uncertainty,” in ICRA, 2012, pp. 3238-3244.
 \bibitem{IEEEhowto:stengel} R.~F.~Stengel, \emph{Optimal Control and Estimation}. Dover Publications, 1994.
+\bibitem{IEEEhowto:sanderson} C.~Sanderson, R.~Curtin. \emph{Armadillo: a template-based C++ library for linear algebra}. Journal of Open Source Software, Vol. 1, pp. 26, 2016.
 \bibitem{IEEEhowto:thrun} S.~Thrun, W.~Burgard, and D.~Fox. \emph{Probabilistic Robotics}. MIT Press, 2005.
 
 \end{thebibliography}
