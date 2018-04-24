@@ -537,7 +537,7 @@ Furthermore, sensor measurements that are used to localize a robot are also corr
 A key feature of this problem is that the event of a collision not occurring at a configuration $x_t$ of a motion plan is \underline{not} independent of the event of a collision not occurring at previous configurations of the motion plan. More formally:
 $$p(x_t \in \mathcal{C}_F) \neq p\left(x_t \in \mathcal{C}_F | \bigwedge\limits_{i=0}^{t-1} x_i \in \mathcal{C}_F \right)$$
 
-Prior approaches to solving this problem {\color{red}{cite here}} often consider the events of collisions along the motion plan to be independent of each other, which can lead to an overly conservative estimate of the probability of collision for a motion plan. Incorporating the fact that the collision events (and non-collision events) are dependent on each other increases the difficultly of computing an accurate estimate of the probability of collision.
+Prior approaches to solving this problem often consider the events of collisions along the motion plan to be independent of each other, which can lead to an overly conservative estimate of the probability of collision for a motion plan. Incorporating the fact that the collision events (and non-collision events) are dependent on each other increases the difficultly of computing an accurate estimate of the probability of collision.
 
 \subsubsection{Computational Time of Monte-Carlo Simulations}
 
@@ -582,7 +582,7 @@ We base our approach on the framework of \cite{IEEEhowto:patil}, and attempt to 
 
 An important note to make is that the approach in \cite{IEEEhowto:patil} may be sufficient if we could express linear constraints in the configuration space $\mathcal{C}$ of a robot. Knowing the obstacle constraints in  $\mathcal{C}$ rather than as constraints on location in the robot's 3D-workspace could allow us to apply the approach of Patil et al. to truncate the distribution that represents a KF estimate of the robot's configuration. However, in general, computation of $\mathcal{C}_{OBS} \subset \mathcal{C}$, the space of all robot configurations that lead to collision with an obstacle, is computationally expensive in practice. It follows that learning configuration constraints in $\mathcal{C}$ rather than in the workspace may be very difficult in practice, as well. Furthermore, the constraints of $\mathcal{C}$ may also not be linear since $\mathcal{C}$ can have a complex topology.
 
-Knowing (or learning) constraints for a robot's set of feasible configurations in $\mathcal{C}$ does not seem computationally efficient; however, we assume that we have access to the collision checker $\phi$, which asserts whether an arbitrary $x_t \in \mathcal{C}_{OBS}$. Given the existence of a collision checker, we believe that a \underline{sampling-based approach} for truncation of Gaussian distributions is necessary for a decent attempt of a solution to estimating the probability of collision. Other approaches assume the existence of a distance-to-obstacle checker {\color{red}{cite here}}, which may allow us to quantify the maximum clearance from an obstacle for a robot configuration to not collide. These approaches utilize this clearance in their computation of the probability of collision.
+Knowing (or learning) constraints for a robot's set of feasible configurations in $\mathcal{C}$ does not seem computationally efficient; however, we assume that we have access to the collision checker $\phi$, which asserts whether an arbitrary $x_t \in \mathcal{C}_{OBS}$. Given the existence of a collision checker, we believe that a \underline{sampling-based approach} for truncation of Gaussian distributions is necessary for a decent attempt of a solution to estimating the probability of collision. Other approaches assume the existence of a distance-to-obstacle checker \cite{IEEEhowto:van_den_berg}, which may allow us to quantify the maximum clearance from an obstacle for a robot configuration to not collide. These approaches utilize this clearance in their computation of the probability of collision.
 
 We observe that we need a method to truncate the robot state distribution computed from the KF estimate with respect to obstacles, where the proportion of the distribution that is truncated would represented the probability of collision for that waypoint of the motion plan--contingent on the the prior states being collision-free.
 
@@ -1044,6 +1044,7 @@ The author would like to acknowledge Dmitry Berenson, Maani Ghaffari, and Valeri
 \bibitem{IEEEhowto:stengel} R.~F.~Stengel, \emph{Optimal Control and Estimation}. Dover Publications, 1994.
 \bibitem{IEEEhowto:sanderson} C.~Sanderson, R.~Curtin. \emph{Armadillo: a template-based C++ library for linear algebra}. Journal of Open Source Software, Vol. 1, pp. 26, 2016.
 \bibitem{IEEEhowto:thrun} S.~Thrun, W.~Burgard, and D.~Fox. \emph{Probabilistic Robotics}. MIT Press, 2005.
+\bibitem{IEEEhowto:van_den_berg}J.~van den Berg, P.~Abbeel, and K.~Goldberg, “LQG-MP: Optimized path planning for robots with motion uncertainty and imperfect state information,” in Int. Journal of Robotics Research, vol. 30, no. 7, 2011, pp. 895–913.
 
 \end{thebibliography}
 
