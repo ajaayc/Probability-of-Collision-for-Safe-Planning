@@ -289,7 +289,8 @@
 
 
 
-%TODO: IS this necessary?
+%TODO: IS this necessary? Need this for subfloat apparently
+\usepackage[caption=false]{subfig}
 %\usepackage{subfig}
 
 
@@ -864,7 +865,7 @@ We then executed our algorithm with 1, 2, and 3 mixture components. We refer to 
 
 \begin{table}[h!]
   \begin{center}
-    \caption{Probability of Collision Estimate for Various Methods\\(200 Executions, 10,000 Samples)}
+    \caption{Probability of Collision Estimate for Various Methods\protect\\(200 Executions, 10,000 Samples)}
     \label{tab:table1}
     \begin{tabular}{l|c|c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
       \textbf{} & \textbf{1-GMM} & \textbf{2-GMM} & \textbf{3-GMM} & \textbf{MC Simulation}\\
