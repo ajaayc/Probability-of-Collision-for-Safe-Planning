@@ -1,9 +1,0 @@
-<KinBody name="box0">
-  <Body name="base">
-    <Geom type="box">
-      <extents>1 0.5 1</extents>
-      <translation>0 0 0.1</translation>
-      <diffusecolor>1 0 0</diffusecolor>
-    </Geom>
-  </Body>
-</KinBody>

@@ -1,0 +1,7 @@
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/install.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/list_install_components.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/rebuild_cache.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/armadillo.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/install/strip.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/install/local.dir
+/home/ajaay/Documents/eecs598/finalproject/armadillo-8.400.0/CMakeFiles/edit_cache.dir
