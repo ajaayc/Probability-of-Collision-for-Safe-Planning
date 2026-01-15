@@ -11,7 +11,7 @@ For this research, I utilized the [OpenRave](http://openrave.org/) simulation fr
 Before running the simulator and probability of collision computation, ensure you have the following dependencies installed:
 
 ### Required Software
-- **Python 2.7** (required for OpenRAVE compatibility - *Note: Python 2.7 reached end-of-life in January 2020, but is required for OpenRAVE compatibility*)
+- **Python 2.7** (required for OpenRAVE compatibility - *Note: Python 2.7 reached end of life in January 2020, but is required for OpenRAVE compatibility*)
 - **OpenRAVE 0.9+** - Robotics simulation framework ([installation guide](http://openrave.org/docs/latest_stable/install/))
 - **Armadillo 8.4+** - C++ linear algebra library ([download](http://arma.sourceforge.net/))
 - **CMake 2.6+** - For building the C++ plugin
@@ -20,7 +20,7 @@ Before running the simulator and probability of collision computation, ensure yo
 ### Python Dependencies
 - `numpy` - Numerical computing
 - `openravepy` - Python bindings for OpenRAVE
-- `pickle` (or `cPickle`) - Object serialization (included in Python 2.7 standard library)
+- `pickle` (also available as `cPickle` for better performance) - Object serialization (included in Python 2.7 standard library)
 
 Install Python dependencies:
 ```bash
@@ -81,7 +81,7 @@ python MCSimulation.py MC
 
 **What this does:**
 - Loads the generated `trajectory.dat` and `odometry.dat` files
-- Runs 200 Monte Carlo simulations (configurable via the `numSimulations` variable in the code)
+- Runs multiple Monte Carlo simulations (default: 200, configurable via the `numSimulations` variable in the code)
 - Each simulation samples from the uncertainty distribution to generate possible robot trajectories
 - Computes the proportion of simulations that result in collisions
 - Outputs results to a timestamped file `simReport_YYYY-MM-DD_HH_MM_SS.txt`
@@ -97,7 +97,7 @@ python MCSimulation.py GMM
 **What this does:**
 - Loads the generated `trajectory.dat` and `odometry.dat` files
 - Uses the novel "Sampling-Based GMM Collision Estimation" method described in the [paper](https://ajaayc.github.io/resources/ajaay_paper.pdf)
-- Runs 200 estimations (configurable via the `numSimulations` variable in the code)
+- Runs multiple estimations (default: 200, configurable via the `numSimulations` variable in the code)
 - Fits Gaussian mixture models to the state uncertainty and samples to estimate collision probability
 - Outputs results to a timestamped file `GMMsimReport_YYYY-MM-DD_HH_MM_SS.txt`
 
