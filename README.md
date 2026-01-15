@@ -59,7 +59,7 @@ python hw2_astar.py
 ```
 
 **What this does:**
-- Loads the PR2 robot in the OpenRAVE environment (using `data/pr2test2.env.xml`)
+- Loads the PR2 robot in the OpenRAVE environment (using the environment file specified in the code - currently set to use `data/pr2test2.env.xml` when `envindex=1`)
 - Plans a collision-free path using A* algorithm from the robot's starting position to a goal configuration
 - Generates two output files:
   - `trajectory.dat` - Contains the planned robot trajectory (sequence of [x, y, theta] configurations)
